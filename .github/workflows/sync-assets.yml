@@ -1,0 +1,33 @@
+name: Sync Activos (Notion → Supabase)
+
+# Reconciliación nocturna de [AKC] - Activos Kairos visibles de la empresa
+# Activos Kairos hacia la réplica Supabase. Notion sigue siendo la fuente de verdad.
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: sync-assets
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run sync:assets
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_ASSETS_DB: ${{ secrets.NOTION_ASSETS_DB }}
+          NOTION_INCIDENTS_DB: ${{ secrets.NOTION_INCIDENTS_DB }}
+          AK_COMPANY_NOTION_ID: ${{ secrets.AK_COMPANY_NOTION_ID }}

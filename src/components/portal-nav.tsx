@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -28,14 +29,18 @@ export function PortalNav({
     <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-sm font-bold text-brand-foreground">
-              K
-            </span>
+          <Link href="/inicio" className="flex items-center gap-2">
+            <Image
+              src="/isotipo.png"
+              alt="Activos Kairos"
+              width={28}
+              height={28}
+              className="h-7 w-7"
+            />
             <span className="hidden text-sm font-semibold sm:inline">
               {companyName}
             </span>
-          </div>
+          </Link>
           <nav className="flex items-center gap-1">
             {links.map((l) => {
               const active =

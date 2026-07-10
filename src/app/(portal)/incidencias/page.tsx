@@ -18,8 +18,13 @@ export default async function IncidenciasPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Incidencias</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-brand-accent text-xs font-semibold tracking-wide uppercase">
+          Soporte
+        </p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
+          Incidencias
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm">
           Histórico de incidencias y su estado de resolución.
         </p>
       </div>

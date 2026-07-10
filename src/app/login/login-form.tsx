@@ -60,7 +60,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+    <div className="border-border bg-card rounded-[14px] border p-6 shadow-[var(--shadow-md)]">
       {step === "email" ? (
         <form onSubmit={sendCode} className="space-y-4">
           <div className="space-y-2">
@@ -73,10 +73,15 @@ export function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tucorreo@activoskairos.com"
+              className="h-11 rounded-[14px]"
             />
           </div>
-          {error && <p className="text-sm text-danger-foreground">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
+          {error && <p className="text-danger-foreground text-sm">{error}</p>}
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-[14px]"
+            disabled={loading}
+          >
             {loading ? "Enviando…" : "Enviar código"}
           </Button>
         </form>
@@ -92,18 +97,21 @@ export function LoginForm() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="123456"
+              className="h-11 rounded-[14px]"
             />
-            <p className="text-xs text-muted-foreground">
-              Enviado a {email}.
-            </p>
+            <p className="text-muted-foreground text-xs">Enviado a {email}.</p>
           </div>
-          {error && <p className="text-sm text-danger-foreground">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
+          {error && <p className="text-danger-foreground text-sm">{error}</p>}
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-[14px]"
+            disabled={loading}
+          >
             {loading ? "Verificando…" : "Acceder"}
           </Button>
           <button
             type="button"
-            className="w-full text-center text-xs text-muted-foreground hover:underline"
+            className="text-muted-foreground w-full text-center text-xs hover:underline"
             onClick={() => {
               setStep("email");
               setCode("");

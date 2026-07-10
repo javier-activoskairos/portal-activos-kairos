@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/status-badge";
-import { assetTone, formatDate } from "@/lib/status";
+import { assetBadge, formatDateShort, formatProgress } from "@/lib/status";
 
 export const metadata = { title: "Activos · Portal Activos Kairos" };
 export const dynamic = "force-dynamic";
@@ -18,22 +18,38 @@ interface AssetRow {
 }
 
 function AssetCard({ a }: { a: AssetRow }) {
+  const pct = formatProgress(a.progress);
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+    <div className="border-border bg-card rounded-[20px] border p-5 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-medium">{a.name}</h3>
-        <StatusBadge label={a.status} tone={assetTone(a.status)} />
+        <StatusBadge label={a.status} spec={assetBadge(a.status)} />
       </div>
       {a.desired_result && (
-        <p className="mt-2 text-sm text-muted-foreground">{a.desired_result}</p>
+        <p className="text-muted-foreground mt-2 text-sm">{a.desired_result}</p>
       )}
-      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
-        {a.progress && <span>Progreso: {a.progress}</span>}
-        <span>Inicio: {formatDate(a.started_at)}</span>
-        {a.status === "Terminado" ? (
-          <span>Fin: {formatDate(a.ended_at)}</span>
+
+      {a.status === "En Progreso" && (
+        <div className="mt-4">
+          <div className="text-muted-foreground flex items-center justify-between text-xs">
+            <span>Progreso</span>
+            <span className="tabular-nums">{pct}%</span>
+          </div>
+          <div className="bg-muted mt-1.5 h-1.5 overflow-hidden rounded-full">
+            <div
+              className="bg-brand h-full rounded-full"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
+        {a.started_at && <span>Inicio: {formatDateShort(a.started_at)}</span>}
+        {a.status === "Terminado" && a.ended_at ? (
+          <span>Entregado: {formatDateShort(a.ended_at)}</span>
         ) : (
-          <span>Plazo: {formatDate(a.due_at)}</span>
+          a.due_at && <span>Entrega estimada: {formatDateShort(a.due_at)}</span>
         )}
       </div>
       {a.asset_url && (
@@ -41,7 +57,7 @@ function AssetCard({ a }: { a: AssetRow }) {
           href={a.asset_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-flex text-sm font-medium text-brand hover:underline"
+          className="text-brand-accent mt-4 inline-flex text-sm font-medium hover:underline"
         >
           Ver entregable →
         </a>
@@ -66,18 +82,21 @@ export default async function ActivosPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Activos</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-brand-accent text-xs font-semibold tracking-wide uppercase">
+          Portafolio
+        </p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Activos</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
           Proyectos en curso y entregados por Activos Kairos.
         </p>
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground">
+        <h2 className="text-muted-foreground text-sm font-semibold">
           En progreso ({inProgress.length})
         </h2>
         {inProgress.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             No hay activos en progreso.
           </p>
         ) : (
@@ -90,11 +109,11 @@ export default async function ActivosPage() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground">
+        <h2 className="text-muted-foreground text-sm font-semibold">
           Terminados ({done.length})
         </h2>
         {done.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Aún no hay activos terminados.
           </p>
         ) : (

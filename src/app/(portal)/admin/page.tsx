@@ -18,6 +18,22 @@ interface RunRow {
   error_summary: string | null;
 }
 
+const SOURCE_LABEL: Record<string, string> = {
+  incidents: "Incidencias",
+  assets: "Activos",
+};
+
+const MODE_LABEL: Record<string, string> = {
+  scheduled: "Programado",
+  manual: "Manual",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  success: "Correcto",
+  error: "Error",
+  running: "En curso",
+};
+
 function fmtTime(v: string | null) {
   if (!v) return "—";
   const d = new Date(v);
@@ -57,27 +73,45 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Panel de sincronización</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Estado de la réplica desde Notion. Panel interno (solo equipo).
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-brand-accent text-xs font-semibold tracking-wide uppercase">
+            Operación
+          </p>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
+            Panel de sincronización
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Estado de la réplica desde Notion.
+          </p>
+        </div>
+        <span className="border-border bg-muted text-muted-foreground rounded-full border px-3 py-1 text-xs font-medium">
+          Interno
+        </span>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <div className="border-border bg-card rounded-[20px] border p-5 shadow-[var(--shadow-sm)]">
           <h2 className="text-sm font-semibold">Incidencias</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Última sync correcta: {fmtTime(lastBySource["incidents"] ?? null)}
+          <p className="text-muted-foreground mt-1 text-xs">
+            Fuente: Incidencias · Modo: Programado · Última sync:{" "}
+            <span className="font-mono">
+              {fmtTime(lastBySource["incidents"] ?? null)}
+            </span>
           </p>
-          <p className="text-xs text-muted-foreground">Automático cada 10 min.</p>
+          <p className="text-muted-foreground text-xs">
+            Automático cada 10 min.
+          </p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <div className="border-border bg-card rounded-[20px] border p-5 shadow-[var(--shadow-sm)]">
           <h2 className="text-sm font-semibold">Activos</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Última sync correcta: {fmtTime(lastBySource["assets"] ?? null)}
+          <p className="text-muted-foreground mt-1 text-xs">
+            Fuente: Activos · Modo: Programado · Última sync:{" "}
+            <span className="font-mono">
+              {fmtTime(lastBySource["assets"] ?? null)}
+            </span>
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Reconciliación nocturna (03:00).
           </p>
         </div>
@@ -85,14 +119,14 @@ export default async function AdminPage() {
 
       <SyncPanel />
 
-      <section className="rounded-xl border border-border bg-card shadow-sm">
-        <div className="border-b border-border px-5 py-4">
+      <section className="border-border bg-card rounded-[20px] border shadow-[var(--shadow-sm)]">
+        <div className="border-border border-b px-5 py-4">
           <h2 className="text-sm font-semibold">Historial reciente</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="text-xs text-muted-foreground">
-              <tr className="border-b border-border">
+            <thead className="text-muted-foreground text-xs">
+              <tr className="border-border border-b">
                 <th className="px-5 py-2 font-medium">Fuente</th>
                 <th className="px-5 py-2 font-medium">Modo</th>
                 <th className="px-5 py-2 font-medium">Estado</th>
@@ -106,16 +140,23 @@ export default async function AdminPage() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-5 py-8 text-center text-muted-foreground"
+                    className="text-muted-foreground px-5 py-8 text-center"
                   >
                     Sin ejecuciones registradas todavía.
                   </td>
                 </tr>
               ) : (
                 runs.map((r) => (
-                  <tr key={r.id} className="border-b border-border last:border-0">
-                    <td className="px-5 py-2">{r.source}</td>
-                    <td className="px-5 py-2 text-muted-foreground">{r.mode}</td>
+                  <tr
+                    key={r.id}
+                    className="border-border border-b last:border-0"
+                  >
+                    <td className="px-5 py-2">
+                      {SOURCE_LABEL[r.source] ?? r.source}
+                    </td>
+                    <td className="text-muted-foreground px-5 py-2">
+                      {MODE_LABEL[r.mode] ?? r.mode}
+                    </td>
                     <td className="px-5 py-2">
                       <span
                         className={
@@ -126,14 +167,16 @@ export default async function AdminPage() {
                               : "text-muted-foreground"
                         }
                       >
-                        {r.status}
+                        {STATUS_LABEL[r.status] ?? r.status}
                       </span>
                     </td>
-                    <td className="px-5 py-2 tabular-nums">{r.rows_read ?? "—"}</td>
-                    <td className="px-5 py-2 tabular-nums">
+                    <td className="px-5 py-2 font-mono tabular-nums">
+                      {r.rows_read ?? "—"}
+                    </td>
+                    <td className="px-5 py-2 font-mono tabular-nums">
                       {r.rows_upserted ?? "—"}
                     </td>
-                    <td className="px-5 py-2 text-muted-foreground">
+                    <td className="text-muted-foreground px-5 py-2 font-mono">
                       {fmtTime(r.started_at)}
                     </td>
                   </tr>

@@ -12,7 +12,7 @@ export default async function PortalLayout({
   if (!session) redirect("/acceso-denegado");
 
   return (
-    <div className="min-h-screen bg-secondary/40">
+    <div className="bg-background min-h-screen">
       <PortalNav
         email={session.email}
         companyName={session.companyName}

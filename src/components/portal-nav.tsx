@@ -26,8 +26,8 @@ export function PortalNav({
     : LINKS;
 
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+    <header className="border-border bg-background/80 sticky top-0 z-10 border-b backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-6">
           <Link href="/inicio" className="flex items-center gap-2">
             <Image
@@ -50,9 +50,9 @@ export function PortalNav({
                   key={l.href}
                   href={l.href}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    "rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "bg-accent text-brand-accent"
+                      ? "bg-accent text-[#c44e00]"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -63,13 +63,13 @@ export function PortalNav({
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-muted-foreground md:inline">
+          <span className="hidden text-[13px] text-[#9a8e82] md:inline">
             {email}
           </span>
           <form action="/auth/signout" method="post">
             <button
               type="submit"
-              className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary"
+              className="border-border text-muted-foreground hover:bg-secondary rounded-full border px-2.5 py-1 text-xs font-medium"
             >
               Salir
             </button>

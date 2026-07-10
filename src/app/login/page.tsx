@@ -6,11 +6,11 @@ export const metadata = { title: "Acceder · Portal Activos Kairos" };
 
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-secondary px-4">
+    <main className="bg-background relative flex min-h-screen items-center justify-center px-4">
       {/* Realce de marca sutil en el fondo */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-accent to-transparent"
+        className="from-accent pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b to-transparent"
       />
       <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
@@ -25,14 +25,14 @@ export default function LoginPage() {
           <h1 className="text-xl font-semibold tracking-tight">
             Portal Activos Kairos
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-sm">
             Accede con tu correo. Te enviaremos un código.
           </p>
         </div>
         <Suspense>
           <LoginForm />
         </Suspense>
-        <p className="mt-6 text-center text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-6 text-center text-xs">
           Acceso exclusivo para clientes de Activos Kairos.
         </p>
       </div>

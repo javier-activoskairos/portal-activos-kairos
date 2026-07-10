@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
-import { incidentTone, formatDate } from "@/lib/status";
+import { incidentBadge, formatDate } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
 export interface IncidentRow {
@@ -53,15 +53,15 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1">
+        <div className="bg-muted flex gap-1 rounded-full p-1">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
                 filter === f.key
-                  ? "bg-accent text-brand-accent"
+                  ? "bg-card text-brand-accent shadow-[var(--shadow-sm)]"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -73,12 +73,12 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           placeholder="Buscar incidencia…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="sm:max-w-xs"
+          className="h-11 rounded-[14px] sm:max-w-xs"
         />
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
+        <p className="border-border bg-card text-muted-foreground rounded-[20px] border px-5 py-10 text-center text-sm">
           No hay incidencias que coincidan.
         </p>
       ) : (
@@ -86,21 +86,21 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           {filtered.map((i) => (
             <li
               key={i.id}
-              className="rounded-xl border border-border bg-card p-5 shadow-sm"
+              className="border-border bg-card rounded-2xl border p-5 shadow-[var(--shadow-sm)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="font-medium">{i.title}</h3>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                     <span>{formatDate(i.created_at)}</span>
                     {i.label && <span>{i.label}</span>}
                     {i.source && <span>Vía {i.source}</span>}
                   </div>
                 </div>
-                <StatusBadge label={i.status} tone={incidentTone(i.status)} />
+                <StatusBadge label={i.status} spec={incidentBadge(i.status)} />
               </div>
               {i.response && (
-                <p className="mt-3 border-t border-border pt-3 text-sm text-muted-foreground">
+                <p className="border-border text-muted-foreground mt-3 border-t pt-3 text-sm">
                   {i.response}
                 </p>
               )}

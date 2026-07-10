@@ -1,13 +1,11 @@
 import type { MetadataRoute } from "next";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-
+// Portal privado: no indexar en buscadores.
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      disallow: "/",
     },
-    sitemap: `${siteUrl}/sitemap.xml`,
   };
 }

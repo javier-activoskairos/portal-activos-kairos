@@ -1,23 +1,81 @@
-# Render Blueprint — Fábrica de Webs Kairos
-# Despliega el sitio como Web Service Node y activa previews por PR.
-# Docs: https://render.com/docs/blueprint-spec
+# Render Blueprint — Portal Activos Kairos (Fase 1)
+# 1 Web Service (Next.js) + 2 Cron Jobs (sync incidencias 10 min / activos nocturno).
+# Los secretos se definen en el dashboard de Render (sync: false), nunca aquí.
 services:
   - type: web
-    name: kairos-boilerplate
+    name: portal-activos-kairos
     runtime: node
     plan: free
-    region: frankfurt # EU
-    branch: main # rama de producción
+    region: frankfurt
+    branch: main
     buildCommand: npm ci && npm run build
     startCommand: npm run start
     autoDeploy: true
-    healthCheckPath: /
+    healthCheckPath: /login
     envVars:
       - key: NODE_VERSION
         value: "22"
       - key: NEXT_PUBLIC_SITE_URL
-        sync: false # definir por entorno en el dashboard de Render
+        value: https://portal.activoskairos.com
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NOTION_TOKEN
+        sync: false
+      - key: NOTION_ASSETS_DB
+        sync: false
+      - key: NOTION_INCIDENTS_DB
+        sync: false
+      - key: AK_COMPANY_NOTION_ID
+        sync: false
+      - key: CRON_SECRET
+        sync: false
 
-# Previews automáticas: cada Pull Request genera un entorno efímero.
-previews:
-  generation: automatic
+  - type: cron
+    name: sync-incidencias
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    schedule: "*/10 * * * *"
+    buildCommand: npm ci
+    startCommand: npm run sync:incidents
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NOTION_TOKEN
+        sync: false
+      - key: NOTION_INCIDENTS_DB
+        sync: false
+      - key: AK_COMPANY_NOTION_ID
+        sync: false
+
+  - type: cron
+    name: sync-activos
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    schedule: "0 3 * * *"
+    buildCommand: npm ci
+    startCommand: npm run sync:assets
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NOTION_TOKEN
+        sync: false
+      - key: NOTION_ASSETS_DB
+        sync: false
+      - key: AK_COMPANY_NOTION_ID
+        sync: false

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getPortalSession } from "@/lib/session";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { getPortalDb } from "@/lib/session";
 import { IconAlert, IconAssets, IconBuilding } from "@/components/icons";
 import { formatProgress } from "@/lib/status";
 import { nameFromEmail } from "@/lib/utils";
@@ -48,13 +48,22 @@ interface IncidentRow {
   resolved_at: string | null;
 }
 
-/** Marcas del eje Y: de `max` a 0. Paso 2 si max>5, si no 1. */
-function axisTicks(max: number): number[] {
-  const step = max > 5 ? 2 : 1;
-  const out: number[] = [];
-  for (let t = max; t > 0; t -= step) out.push(t);
-  out.push(0);
-  return out;
+/**
+ * Escala "bonita" para el eje Y: elige un paso redondo (1·2·5·10…) de modo
+ * que las marcas queden equiespaciadas en valor y coincidan con las barras.
+ */
+function niceScale(dataMax: number): { max: number; ticks: number[] } {
+  const m = Math.max(1, dataMax);
+  const rawStep = m / 6;
+  const pow = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const n = rawStep / pow;
+  const unit = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  const step = Math.max(1, Math.round(unit * pow));
+  const max = Math.ceil(m / step) * step;
+  const ticks: number[] = [];
+  for (let t = max; t > 0; t -= step) ticks.push(t);
+  ticks.push(0);
+  return { max, ticks };
 }
 
 /** Devuelve las claves (año-mes) de los últimos `n` meses, del más antiguo al actual. */
@@ -79,18 +88,19 @@ function monthKey(value: string | null): string | null {
 }
 
 export default async function InicioPage() {
-  const [session, supabase] = await Promise.all([
-    getPortalSession(),
-    createClient(),
-  ]);
+  const ctx = await getPortalDb();
+  if (!ctx) redirect("/acceso-denegado");
+  const { session, db, companyId } = ctx;
 
   const [assetsRes, incidentsRes] = await Promise.all([
-    supabase
+    db
       .from("assets")
-      .select("id, name, status, progress, desired_result, due_at, ended_at"),
-    supabase
+      .select("id, name, status, progress, desired_result, due_at, ended_at")
+      .eq("company_id", companyId),
+    db
       .from("incidents")
-      .select("status, title, created_at, resolved_at"),
+      .select("status, title, created_at, resolved_at")
+      .eq("company_id", companyId),
   ]);
 
   const assets = (assetsRes.data ?? []) as AssetRow[];
@@ -145,8 +155,7 @@ export default async function InicioPage() {
       .map((a) => a.name);
     return { label: m.label, value: items.length, items };
   });
-  const assetsMax = Math.max(1, ...assetsByMonth.map((d) => d.value));
-  const assetsTicks = axisTicks(assetsMax);
+  const assetsScale = niceScale(Math.max(...assetsByMonth.map((d) => d.value)));
 
   // --- Gráfico B: incidencias por mes (por created_at), resueltas/abiertas ---
   const incidentsByMonth = months.map((m) => {
@@ -161,11 +170,9 @@ export default async function InicioPage() {
       openItems,
     };
   });
-  const incidentsMax = Math.max(
-    1,
-    ...incidentsByMonth.map((d) => d.resolved + d.open),
+  const incidentsScale = niceScale(
+    Math.max(...incidentsByMonth.map((d) => d.resolved + d.open)),
   );
-  const incidentsTicks = axisTicks(incidentsMax);
 
   return (
     <div className="portal-reveal space-y-4">
@@ -280,7 +287,7 @@ export default async function InicioPage() {
             {/* Eje Y (índices) */}
             <div className="flex flex-col">
               <div className="flex flex-1 flex-col items-end justify-between">
-                {assetsTicks.map((t) => (
+                {assetsScale.ticks.map((t) => (
                   <span
                     key={t}
                     className="text-muted-foreground font-mono text-[10px] leading-none"
@@ -300,7 +307,7 @@ export default async function InicioPage() {
                   <div
                     className="bg-brand w-[68%] max-w-[34px] rounded-t-md transition-[filter] group-hover:brightness-110"
                     style={{
-                      height: `${(d.value / assetsMax) * 100}%`,
+                      height: `${(d.value / assetsScale.max) * 100}%`,
                       minHeight: d.value > 0 ? 4 : 0,
                     }}
                   />
@@ -353,7 +360,7 @@ export default async function InicioPage() {
             {/* Eje Y (índices) */}
             <div className="flex flex-col">
               <div className="flex flex-1 flex-col items-end justify-between">
-                {incidentsTicks.map((t) => (
+                {incidentsScale.ticks.map((t) => (
                   <span
                     key={t}
                     className="text-muted-foreground font-mono text-[10px] leading-none"
@@ -375,7 +382,7 @@ export default async function InicioPage() {
                     <div
                       className="flex w-[68%] max-w-[34px] flex-col overflow-hidden rounded-t-md transition-[filter] group-hover:brightness-110"
                       style={{
-                        height: `${(total / incidentsMax) * 100}%`,
+                        height: `${(total / incidentsScale.max) * 100}%`,
                         minHeight: total > 0 ? 4 : 0,
                       }}
                     >

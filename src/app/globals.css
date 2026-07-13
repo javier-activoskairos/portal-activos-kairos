@@ -233,4 +233,12 @@
       transform: scaleY(1);
     }
   }
+  .kp-spin {
+    animation: kp-spin-anim 0.9s linear infinite;
+  }
+  @keyframes kp-spin-anim {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }

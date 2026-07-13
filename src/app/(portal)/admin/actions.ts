@@ -18,3 +18,21 @@ export async function runManualSync(source: "incidents" | "assets") {
   revalidatePath("/admin");
   return result;
 }
+
+// Sincroniza ambas fuentes (incidencias + activos). Solo admins.
+export async function runAllSync() {
+  const session = await getPortalSession();
+  if (!session || session.role !== "admin") {
+    throw new Error("No autorizado");
+  }
+  const incidents = await syncIncidents("manual");
+  const assets = await syncAssets("manual");
+  revalidatePath("/admin");
+  return {
+    ok: incidents.status !== "error" && assets.status !== "error",
+    rowsUpserted:
+      (incidents.rowsUpserted ?? 0) + (assets.rowsUpserted ?? 0),
+    rowsRead: (incidents.rowsRead ?? 0) + (assets.rowsRead ?? 0),
+    error: incidents.error || assets.error || null,
+  };
+}

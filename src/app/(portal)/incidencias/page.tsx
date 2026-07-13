@@ -1,16 +1,21 @@
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { getPortalDb } from "@/lib/session";
 import { IncidentsView, type IncidentRow } from "./incidents-view";
 
 export const metadata = { title: "Incidencias · Portal Activos Kairos" };
 export const dynamic = "force-dynamic";
 
 export default async function IncidenciasPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
+  const ctx = await getPortalDb();
+  if (!ctx) redirect("/acceso-denegado");
+  const { db, companyId } = ctx;
+
+  const { data } = await db
     .from("incidents")
     .select(
       "id, title, status, label, source, additional_info, response, error_url, created_at, resolved_at, sla_deadline",
     )
+    .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   const incidents = (data ?? []) as IncidentRow[];

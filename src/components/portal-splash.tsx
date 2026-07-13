@@ -5,22 +5,22 @@ import { cn } from "@/lib/utils";
 
 /**
  * Transición de entrada al portal: la K naranja se rellena de abajo a arriba
- * (0.7s) al abrir la interfaz. El fade NO empieza hasta que el relleno llega
- * al 100% (se dispara con `onAnimationEnd` del relleno), así la animación no
- * se corta a medias. Aparece una vez por sesión.
+ * (0.7s) al abrir la interfaz. El relleno es un div naranja que crece con
+ * `transform: scaleY` (fluido por GPU, siempre completa) enmascarado con la
+ * forma del isotipo. El fade NO empieza hasta que el relleno termina
+ * (`onAnimationEnd`). Aparece una vez por sesión.
  */
 export function PortalSplash() {
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("kp-splash-v4")) {
+    if (sessionStorage.getItem("kp-splash-v5")) {
       const t = setTimeout(() => setVisible(false), 0);
       return () => clearTimeout(t);
     }
-    sessionStorage.setItem("kp-splash-v4", "1");
-    // Seguridad: si el relleno no emite animationend (p. ej. reduced-motion),
-    // ocultar igualmente.
+    sessionStorage.setItem("kp-splash-v5", "1");
+    // Seguridad: si no llega animationend (p. ej. reduced-motion), ocultar.
     const t1 = setTimeout(() => setFading(true), 1500);
     const t2 = setTimeout(() => setVisible(false), 1820);
     return () => {
@@ -37,20 +37,6 @@ export function PortalSplash() {
 
   if (!visible) return null;
 
-  const mask = {
-    WebkitMaskImage: "url(/isotipo.png)",
-    maskImage: "url(/isotipo.png)",
-    WebkitMaskSize: "contain",
-    maskSize: "contain",
-    WebkitMaskRepeat: "no-repeat",
-    maskRepeat: "no-repeat",
-    WebkitMaskPosition: "center",
-    maskPosition: "center",
-    backgroundColor: "color-mix(in oklch, var(--brand), transparent 82%)",
-    width: 84,
-    height: 84,
-  } as const;
-
   return (
     <div
       aria-hidden
@@ -59,7 +45,10 @@ export function PortalSplash() {
         fading ? "opacity-0" : "opacity-100",
       )}
     >
-      <div className="kp-kfill" style={mask} onAnimationEnd={onFillDone} />
+      <div className="kp-kfill-mask" style={{ width: 84, height: 84 }}>
+        <div className="kp-kfill-base" />
+        <div className="kp-kfill-bar" onAnimationEnd={onFillDone} />
+      </div>
       <p className="text-foreground text-lg font-extrabold tracking-tight">
         Activos Kairos
       </p>

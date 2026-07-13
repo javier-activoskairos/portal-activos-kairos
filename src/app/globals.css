@@ -195,25 +195,42 @@
 
   /* Splash de entrada: la K de marca se rellena de naranja de abajo a arriba,
      como una carga rápida. Usa el isotipo como máscara. */
-  .kp-kfill {
-    background-image: linear-gradient(var(--brand), var(--brand));
-    background-repeat: no-repeat;
-    background-position: bottom;
-    background-size: 100% 0%;
-    animation: kp-kfill-anim 0.7s cubic-bezier(0.45, 0, 0.15, 1) forwards;
+  .kp-kfill-mask {
+    position: relative;
+    -webkit-mask-image: url(/isotipo.png);
+    mask-image: url(/isotipo.png);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+  }
+  .kp-kfill-base {
+    position: absolute;
+    inset: 0;
+    background-color: color-mix(in oklch, var(--brand), transparent 82%);
+  }
+  .kp-kfill-bar {
+    position: absolute;
+    inset: 0;
+    background-color: var(--brand);
+    transform-origin: bottom;
+    transform: scaleY(0);
+    animation: kp-kfill-anim 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
   @keyframes kp-kfill-anim {
     from {
-      background-size: 100% 0%;
+      transform: scaleY(0);
     }
     to {
-      background-size: 100% 100%;
+      transform: scaleY(1);
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .kp-kfill {
+    .kp-kfill-bar {
       animation: none;
-      background-size: 100% 100%;
+      transform: scaleY(1);
     }
   }
 }

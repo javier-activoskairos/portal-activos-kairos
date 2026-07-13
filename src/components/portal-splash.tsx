@@ -5,21 +5,20 @@ import { cn } from "@/lib/utils";
 
 /**
  * Transición de entrada al portal: la K naranja se rellena de abajo a arriba
- * (0.7s) al abrir la interfaz. El relleno es un div naranja que crece con
- * `transform: scaleY` (fluido por GPU, siempre completa) enmascarado con la
- * forma del isotipo. El fade NO empieza hasta que el relleno termina
- * (`onAnimationEnd`). Aparece una vez por sesión.
+ * (0.7s) en cada carga de página (incluido el login). El relleno es un div
+ * naranja que crece con `transform: scaleY` (fluido por GPU, siempre completa)
+ * enmascarado con la forma del isotipo. El fade NO empieza hasta que el relleno
+ * termina (`onAnimationEnd`).
+ *
+ * Vive en el layout raíz, que solo se monta en una carga/recarga real de
+ * página (no en la navegación cliente entre secciones), así que sale al abrir
+ * o refrescar, pero no al moverse por el portal.
  */
 export function PortalSplash() {
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("kp-splash-v5")) {
-      const t = setTimeout(() => setVisible(false), 0);
-      return () => clearTimeout(t);
-    }
-    sessionStorage.setItem("kp-splash-v5", "1");
     // Seguridad: si no llega animationend (p. ej. reduced-motion), ocultar.
     const t1 = setTimeout(() => setFading(true), 1500);
     const t2 = setTimeout(() => setVisible(false), 1820);

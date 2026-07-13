@@ -17,6 +17,7 @@ export interface IncidentRow {
   response: string | null;
   error_url: string | null;
   created_at: string | null;
+  created_by: string | null;
   resolved_at: string | null;
   sla_deadline: string | null;
 }
@@ -70,13 +71,21 @@ function IncidentDetail({
           </h1>
           <StatusBadge label={incident.status} spec={badge} />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
               Fecha de creación
             </div>
             <div className="text-foreground text-[15px] font-semibold">
               {formatDate(incident.created_at)}
+            </div>
+          </div>
+          <div>
+            <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
+              Creado por
+            </div>
+            <div className="text-foreground text-[15px] font-semibold">
+              {incident.created_by || "—"}
             </div>
           </div>
           <div>

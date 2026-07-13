@@ -1,17 +1,33 @@
 import { redirect } from "next/navigation";
-import { getPortalSession } from "@/lib/session";
+import { getPortalDb } from "@/lib/session";
 import { PortalNav } from "@/components/portal-nav";
 import { exitViewAs } from "./admin/view-as-actions";
 import { IconLogout } from "@/components/icons";
+
+const OPEN_INCIDENTS = [
+  "Pendiente",
+  "Solucionando",
+  "En Espera",
+  "Escalada",
+  "Solucionada con Acciones Pendientes",
+];
 
 export default async function PortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getPortalSession();
+  const ctx = await getPortalDb();
   // Autenticado pero sin acceso autorizado → fuera.
-  if (!session) redirect("/acceso-denegado");
+  if (!ctx) redirect("/acceso-denegado");
+  const { session, db, companyId } = ctx;
+
+  // Contador de incidencias abiertas para el badge del menú.
+  const { count: openIncidents } = await db
+    .from("incidents")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .in("status", OPEN_INCIDENTS);
 
   return (
     <div className="bg-background min-h-screen">
@@ -20,6 +36,7 @@ export default async function PortalLayout({
         companyName={session.companyName}
         logoUrl={session.logoUrl}
         isAdmin={session.role === "admin"}
+        openIncidents={openIncidents ?? 0}
       />
       <main className="min-[900px]:ml-[244px]">
         {session.viewingAs && (

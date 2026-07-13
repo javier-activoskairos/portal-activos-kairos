@@ -194,6 +194,16 @@ export function IconClose({ width = 16, height = 16, ...p }: IconProps) {
   );
 }
 
+export function IconBilling({ width = 19, height = 19, ...p }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20" />
+      <path d="M6 15h4" />
+    </svg>
+  );
+}
+
 export function IconSettings({ width = 19, height = 19, ...p }: IconProps) {
   return (
     <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>

@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   IconAlert,
   IconAssets,
+  IconBilling,
   IconBuilding,
   IconCalendar,
   IconChat,
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/inicio", label: "Inicio", icon: IconHome },
   { href: "/activos", label: "Activos", icon: IconAssets },
   { href: "/incidencias", label: "Incidencias", icon: IconAlert },
+  { href: "/facturacion", label: "Facturación", icon: IconBilling },
   { href: "/chat", label: "Chat", icon: IconChat, soon: true },
 ];
 
@@ -68,11 +70,13 @@ export function PortalNav({
   companyName,
   logoUrl,
   isAdmin,
+  openIncidents = 0,
 }: {
   email: string;
   companyName: string;
   logoUrl: string | null;
   isAdmin: boolean;
+  openIncidents?: number;
 }) {
   const pathname = usePathname();
   const initials = initialsFromEmail(email);
@@ -107,10 +111,17 @@ export function PortalNav({
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = !item.soon && isActive(item.href);
+            const showCount =
+              item.href === "/incidencias" && openIncidents > 0;
             const content = (
               <>
                 <Icon /> {item.label}
                 {item.soon && <SoonTag className="ml-auto" />}
+                {showCount && (
+                  <span className="bg-warning text-warning-foreground ml-auto rounded-full px-2 py-0.5 font-mono text-[11.5px] font-bold">
+                    {openIncidents}
+                  </span>
+                )}
               </>
             );
             if (item.soon) {
@@ -143,6 +154,9 @@ export function PortalNav({
 
         <div className="mt-auto flex flex-col gap-3">
           {/* CTAs del portal — en el menú lateral (como el diseño) */}
+          <span className="text-muted-foreground px-2 pb-0.5 text-[10.5px] font-bold tracking-[0.08em] uppercase">
+            Acciones
+          </span>
           <button
             type="button"
             onClick={() => setMeetingOpen(true)}

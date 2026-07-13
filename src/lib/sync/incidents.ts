@@ -25,6 +25,7 @@ function mapIncident(page: any, companyId: string) {
     source: selectName(p["Proveniencia"]),
     additional_info: plainText(p["Info Adicional"]),
     response: plainText(p["Respuesta"]),
+    created_by: formulaValue(p["Creado Por Texto"]),
     created_at: dateStart(p["Fecha de creación"]) ?? page.created_time,
     started_at: dateStart(p["Inicio"]),
     resolved_at: dateEnd(p["Fin"]) ?? dateStart(p["Fin"]),

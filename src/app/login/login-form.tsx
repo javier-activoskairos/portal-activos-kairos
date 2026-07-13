@@ -119,7 +119,7 @@ export function LoginForm() {
             Revisa tu correo.
           </h1>
           <p className="text-muted-foreground mt-2 mb-6 text-[15px] leading-relaxed">
-            Enviamos un código de 6 dígitos a{" "}
+            Enviamos un código de 7 dígitos a{" "}
             <span className="text-foreground font-medium">{email}</span>.
           </p>
 
@@ -137,9 +137,9 @@ export function LoginForm() {
               required
               value={code}
               onChange={(e) =>
-                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 7))
               }
-              placeholder="123456"
+              placeholder="1234567"
               className="text-foreground h-full min-w-0 flex-1 border-none bg-transparent font-mono text-xl tracking-[0.5em] outline-none"
             />
           </div>

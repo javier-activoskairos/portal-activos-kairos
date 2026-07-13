@@ -4,16 +4,20 @@ import { cn } from "@/lib/utils";
 /**
  * Isotipo de Activos Kairos en badge naranja: la K blanca sobre un cuadrado
  * naranja de marca. Reutiliza /isotipo.png (K naranja) y la vuelve blanca con
- * un filtro CSS, sin necesidad de un asset aparte.
+ * un filtro CSS inline (brightness(0) invert(1)), sin necesidad de un asset
+ * aparte. El filtro va inline —no como clase Tailwind— porque la clase
+ * arbitraria `[filter:...]` no siempre se genera y dejaba la K invisible.
  */
 export function BrandMark({
   size = 38,
   radius = 11,
   className,
+  priority = false,
 }: {
   size?: number;
   radius?: number;
   className?: string;
+  priority?: boolean;
 }) {
   const inner = Math.round(size * 0.62);
   return (
@@ -26,8 +30,12 @@ export function BrandMark({
         alt="Activos Kairos"
         width={inner}
         height={inner}
-        className="[filter:brightness(0)_invert(1)]"
-        style={{ width: inner, height: inner }}
+        priority={priority}
+        style={{
+          width: inner,
+          height: inner,
+          filter: "brightness(0) invert(1)",
+        }}
       />
     </span>
   );

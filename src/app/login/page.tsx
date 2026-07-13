@@ -23,7 +23,7 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-[420px]">
         <div className="mb-7 flex items-center gap-3">
-          <BrandMark size={38} radius={11} />
+          <BrandMark size={38} radius={11} priority />
           <span className="text-foreground text-base font-semibold tracking-tight">
             Activos Kairos
           </span>

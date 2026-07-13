@@ -28,8 +28,8 @@ type Task = { name: string; state: "todo" | "doing" | "done" };
 
 function taskState(estado: string | null): Task["state"] {
   if (estado === "Terminado") return "done";
-  if (estado === "En Progreso") return "doing";
-  return "todo"; // Por Hacer / En Espera
+  if (estado === "En Progreso" || estado === "En Espera") return "doing";
+  return "todo"; // Por Hacer (Desechado se descarta antes)
 }
 
 function mapAsset(page: any, companyId: string) {

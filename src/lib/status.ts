@@ -145,7 +145,12 @@ export function formatDateShort(value: string | null | undefined): string {
 
 export function formatProgress(value: string | null | undefined): number {
   if (!value) return 0;
-  const match = value.match(/(\d{1,3})\s*%/);
-  if (match) return Math.min(100, Math.max(0, parseInt(match[1], 10)));
-  return 0;
+  const pctMatch = value.match(/(\d{1,3})\s*%/);
+  if (pctMatch) return Math.min(100, Math.max(0, parseInt(pctMatch[1], 10)));
+  // La fórmula "Progreso" de Notion devuelve una fracción (0–1). Si el valor es
+  // <= 1 lo escalamos a porcentaje; si ya viene 0–100, se usa tal cual.
+  const n = parseFloat(value);
+  if (isNaN(n)) return 0;
+  const pct = n <= 1 ? n * 100 : n;
+  return Math.min(100, Math.max(0, Math.round(pct)));
 }

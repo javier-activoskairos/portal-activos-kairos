@@ -34,12 +34,7 @@ export interface AssetRow {
   tasks: AssetTask[] | null;
 }
 
-// Estados de tarea del diseño → chip + círculo del checklist.
-const TASK_BADGE: Record<AssetTask["state"], BadgeSpec> = {
-  done: { tone: "success", dot: false },
-  doing: { tone: "brandSoft", dot: false },
-  todo: { tone: "muted", dot: false },
-};
+// Estados de tarea del diseño → etiqueta + color del punto del checklist.
 const TASK_LABEL: Record<AssetTask["state"], string> = {
   done: "Hecho",
   doing: "En curso",
@@ -263,7 +258,7 @@ function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
     const m = name.match(/^\s*(\d+)[.)]/);
     return m ? parseInt(m[1], 10) : Number.POSITIVE_INFINITY;
   };
-  const taskGroups = (["todo", "doing", "done"] as AssetTask["state"][])
+  const taskGroups = (["doing", "todo", "done"] as AssetTask["state"][])
     .map((state) => ({
       state,
       items: tasks
@@ -312,6 +307,14 @@ function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
               spec={priorityBadge(a.priority)}
             />
           </div>
+          <div>
+            <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
+              Plazo
+            </div>
+            <div className="text-foreground text-[15px] font-semibold">
+              {d.plazo}
+            </div>
+          </div>
         </div>
 
         {a.desired_result && (
@@ -358,14 +361,17 @@ function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
           <div className="flex flex-col gap-6">
             {taskGroups.map((g) => (
               <div key={g.state}>
-                <div className="mb-1.5 flex items-center gap-2">
-                  <span className="text-muted-foreground text-[11.5px] font-semibold tracking-[0.08em] uppercase">
+                <div className="mb-1 flex items-center gap-2">
+                  <span
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ background: TASK_RING[g.state] }}
+                  />
+                  <span className="text-muted-foreground text-[11.5px] font-bold tracking-[0.08em] uppercase">
                     {TASK_LABEL[g.state]}
                   </span>
-                  <StatusBadge
-                    label={String(g.items.length)}
-                    spec={TASK_BADGE[g.state]}
-                  />
+                  <span className="text-muted-foreground font-mono text-[11.5px] font-semibold">
+                    {g.items.length}
+                  </span>
                 </div>
                 <div className="flex flex-col">
                   {g.items.map((t, i) => {

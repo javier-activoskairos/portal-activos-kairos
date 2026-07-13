@@ -192,4 +192,28 @@
       transform: none;
     }
   }
+
+  /* Splash de entrada: la K de marca se rellena de naranja de abajo a arriba,
+     como una carga rápida. Usa el isotipo como máscara. */
+  .kp-kfill {
+    background-image: linear-gradient(var(--brand), var(--brand));
+    background-repeat: no-repeat;
+    background-position: bottom;
+    background-size: 100% 0%;
+    animation: kp-kfill-anim 0.7s cubic-bezier(0.45, 0, 0.15, 1) forwards;
+  }
+  @keyframes kp-kfill-anim {
+    from {
+      background-size: 100% 0%;
+    }
+    to {
+      background-size: 100% 100%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kp-kfill {
+      animation: none;
+      background-size: 100% 100%;
+    }
+  }
 }

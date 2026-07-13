@@ -4,32 +4,36 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Transición de entrada al portal: la K naranja de Activos Kairos se rellena
- * de abajo a arriba (carga rápida) al abrir la interfaz. Aparece una vez por
- * sesión; no depende de que el servidor esté "frío" (el keep-alive lo mantiene
- * caliente). Es un overlay de cliente.
- *
- * La K se dibuja con el isotipo como máscara: fondo naranja tenue de base y un
- * relleno naranja que sube de 0% a 100% de altura (ver `.kp-kfill` en
- * globals.css).
+ * Transición de entrada al portal: la K naranja se rellena de abajo a arriba
+ * (0.7s) al abrir la interfaz. El fade NO empieza hasta que el relleno llega
+ * al 100% (se dispara con `onAnimationEnd` del relleno), así la animación no
+ * se corta a medias. Aparece una vez por sesión.
  */
 export function PortalSplash() {
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("kp-splash-v3")) {
+    if (sessionStorage.getItem("kp-splash-v4")) {
       const t = setTimeout(() => setVisible(false), 0);
       return () => clearTimeout(t);
     }
-    sessionStorage.setItem("kp-splash-v3", "1");
-    const t1 = setTimeout(() => setFading(true), 1400);
-    const t2 = setTimeout(() => setVisible(false), 1750);
+    sessionStorage.setItem("kp-splash-v4", "1");
+    // Seguridad: si el relleno no emite animationend (p. ej. reduced-motion),
+    // ocultar igualmente.
+    const t1 = setTimeout(() => setFading(true), 1500);
+    const t2 = setTimeout(() => setVisible(false), 1820);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
   }, []);
+
+  // La K terminó de rellenarse → ahora sí, fundido de salida.
+  const onFillDone = () => {
+    setFading(true);
+    setTimeout(() => setVisible(false), 340);
+  };
 
   if (!visible) return null;
 
@@ -55,7 +59,7 @@ export function PortalSplash() {
         fading ? "opacity-0" : "opacity-100",
       )}
     >
-      <div className="kp-kfill" style={mask} />
+      <div className="kp-kfill" style={mask} onAnimationEnd={onFillDone} />
       <p className="text-foreground text-lg font-extrabold tracking-tight">
         Activos Kairos
       </p>

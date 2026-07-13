@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/session";
 import { PortalNav } from "@/components/portal-nav";
+import { PortalSplash } from "@/components/portal-splash";
 
 export default async function PortalLayout({
   children,
@@ -13,6 +14,7 @@ export default async function PortalLayout({
 
   return (
     <div className="bg-background min-h-screen">
+      <PortalSplash />
       <PortalNav
         email={session.email}
         companyName={session.companyName}

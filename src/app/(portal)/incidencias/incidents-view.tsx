@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
-import { IconArrowLeft } from "@/components/icons";
+import { IconArrowLeft, IconPlus } from "@/components/icons";
+import { IncidentModal } from "@/components/incident-modal";
 import { Input } from "@/components/ui/input";
 import { formatDate, incidentBadge, labelBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -26,10 +27,6 @@ const FILTERS = [
   { key: "abiertas", label: "Abiertas" },
   { key: "resueltas", label: "Resueltas" },
 ];
-
-// Alta de incidencia por el cliente: formulario Tally (lo procesa el equipo
-// Kairos, que crea la incidencia en Notion). Fuente única de la URL.
-const TALLY_INCIDENCIA_URL = "https://tally.so/r/eq6O0E";
 
 const OPEN = new Set([
   "Pendiente",
@@ -139,6 +136,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("todas");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [incidentOpen, setIncidentOpen] = useState(false);
 
   const selected = useMemo(
     () => incidents.find((i) => i.id === selectedId) ?? null,
@@ -208,27 +206,14 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
               {open.length}
             </span>
           </div>
-          <a
-            href={TALLY_INCIDENCIA_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => setIncidentOpen(true)}
             className="border-border bg-card text-foreground hover:bg-secondary inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-[13.5px] font-semibold shadow-[var(--shadow-sm)] transition-colors"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <IconPlus />
             Añadir incidencia
-          </a>
+          </button>
         </div>
         {open.length === 0 ? (
           <div className="border-border bg-card rounded-[20px] border px-6 py-8 text-center shadow-[var(--shadow-sm)]">
@@ -334,6 +319,11 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           </div>
         )}
       </section>
+
+      <IncidentModal
+        open={incidentOpen}
+        onClose={() => setIncidentOpen(false)}
+      />
     </div>
   );
 }

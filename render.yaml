@@ -33,6 +33,10 @@ services:
         sync: false
       - key: CRON_SECRET
         sync: false
+      - key: N8N_INCIDENCIA_URL
+        sync: false
+      - key: N8N_INCIDENCIA_APIKEY
+        sync: false
 
   - type: cron
     name: sync-incidencias

@@ -12,6 +12,7 @@ import {
   IconLogout,
 } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AgendarButton } from "@/components/agendar-button";
 import { cn, initialsFromEmail } from "@/lib/utils";
 
 type NavItem = {
@@ -222,6 +223,7 @@ export function PortalNav({
           )}
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2">
+          <AgendarButton variant="icon" />
           <ThemeToggle />
           <form action="/auth/signout" method="post">
             <button

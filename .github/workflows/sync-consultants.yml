@@ -1,0 +1,52 @@
+name: Sync Consultores (Equipo → Portal)
+
+# Copia diaria de los consultores (enlaces de agenda Notion Calendar + foto)
+# desde [AKE] - Equipo hacia el portal, para el botón "Agendar Reunión".
+# Descarga/redimensiona las fotos y regenera src/data/consultants.json.
+on:
+  schedule:
+    - cron: "0 4 * * *" # diario 04:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-consultants
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - name: Sincronizar consultores
+        run: node scripts/sync-consultants.mjs
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      - name: Commit si hay cambios
+        id: commit
+        run: |
+          git config user.name "Kairos Sync Bot"
+          git config user.email "consultoria@activoskairos.com"
+          if [ -n "$(git status --porcelain public/consultants src/data/consultants.json)" ]; then
+            git add public/consultants src/data/consultants.json
+            git commit -m "chore(sync): consultores (agenda + fotos) desde Equipo"
+            git push
+            echo "changed=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "Sin cambios en consultores."
+          fi
+      - name: Desplegar en Render si hubo cambios
+        if: steps.commit.outputs.changed == '1'
+        run: |
+          curl -sS -o /dev/null -w "deploy HTTP %{http_code}\n" -X POST \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "https://api.render.com/v1/services/srv-d98i8s3eo5us73dikcn0/deploys" -d '{}'

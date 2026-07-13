@@ -1,0 +1,33 @@
+[
+  {
+    "slug": "javier",
+    "name": "Javier",
+    "color": "#F96302",
+    "image": "/consultants/javier.webp",
+    "meetings": {
+      "astrapi": "https://calendar.notion.so/meet/javierkairos/astrapi-javier",
+      "arete": "https://calendar.notion.so/meet/javierkairos/arete-javier",
+      "protos": "https://calendar.notion.so/meet/javierkairos/protos-javier"
+    }
+  },
+  {
+    "slug": "alvaro",
+    "name": "Álvaro",
+    "color": "#E8BE00",
+    "image": "/consultants/alvaro.webp",
+    "meetings": {
+      "astrapi": "https://calendar.notion.so/meet/lvaroguillsansano/astrapi-alvaro",
+      "arete": "https://calendar.notion.so/meet/lvaroguillsansano/arete-alvaro"
+    }
+  },
+  {
+    "slug": "fran",
+    "name": "Fran",
+    "color": "#3A90DB",
+    "image": "/consultants/fran.webp",
+    "meetings": {
+      "astrapi": "https://calendar.notion.so/meet/fran-fzwa3he/fran-astrapi",
+      "arete": "https://calendar.notion.so/meet/fran-fzwa3he/fran-arete"
+    }
+  }
+]

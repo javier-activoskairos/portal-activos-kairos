@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPortalSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { IconAlert, IconAssets, IconBuilding } from "@/components/icons";
+import { AgendarButton } from "@/components/agendar-button";
 import { formatProgress } from "@/lib/status";
 import { nameFromEmail } from "@/lib/utils";
 
@@ -147,9 +148,12 @@ export default async function InicioPage() {
 
   return (
     <div className="portal-reveal space-y-4">
-      <h1 className="text-foreground text-[25px] font-extrabold tracking-tight">
-        Hola, {firstName || "de nuevo"}.
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-foreground text-[25px] font-extrabold tracking-tight">
+          Hola, {firstName || "de nuevo"}.
+        </h1>
+        <AgendarButton />
+      </div>
 
       {/* Cabecera: empresa + rol */}
       <div className="border-border bg-card relative overflow-hidden rounded-[22px] border p-6 shadow-[var(--shadow-sm)]">

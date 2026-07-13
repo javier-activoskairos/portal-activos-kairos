@@ -22,7 +22,10 @@ export function BrandMark({
   const inner = Math.round(size * 0.62);
   return (
     <span
-      className={cn("bg-brand inline-flex items-center justify-center", className)}
+      className={cn(
+        "bg-brand inline-flex items-center justify-center",
+        className,
+      )}
       style={{ width: size, height: size, borderRadius: radius }}
     >
       <Image

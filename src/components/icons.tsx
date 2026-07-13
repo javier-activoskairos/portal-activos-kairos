@@ -147,3 +147,49 @@ export function IconCheck({ width = 14, height = 14, ...p }: IconProps) {
     </svg>
   );
 }
+
+export function IconCalendar({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      {...base}
+      strokeWidth={1.9}
+      {...p}
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
+export function IconPlus({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      {...base}
+      strokeWidth={2}
+      {...p}
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+export function IconClose({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      {...base}
+      strokeWidth={2}
+      {...p}
+    >
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}

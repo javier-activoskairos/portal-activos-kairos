@@ -17,11 +17,11 @@ export function PortalSplash() {
   useEffect(() => {
     // Ya mostrada en esta sesión → ocultar (en un tick, sin set-state directo
     // en el efecto).
-    if (sessionStorage.getItem("kp-splash")) {
+    if (sessionStorage.getItem("kp-splash-v2")) {
       const t = setTimeout(() => setVisible(false), 0);
       return () => clearTimeout(t);
     }
-    sessionStorage.setItem("kp-splash", "1");
+    sessionStorage.setItem("kp-splash-v2", "1");
     const t1 = setTimeout(() => setFading(true), 850);
     const t2 = setTimeout(() => setVisible(false), 1200);
     return () => {

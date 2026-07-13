@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PortalSplash } from "@/components/portal-splash";
 
 export const metadata: Metadata = {
   title: "Portal · Activos Kairos",
@@ -36,6 +37,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background text-foreground min-h-screen antialiased">
+        <PortalSplash />
         {children}
       </body>
     </html>

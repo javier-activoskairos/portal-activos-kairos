@@ -43,8 +43,18 @@ interface AssetRow {
 
 interface IncidentRow {
   status: string;
+  title: string;
   created_at: string | null;
   resolved_at: string | null;
+}
+
+/** Marcas del eje Y: de `max` a 0. Paso 2 si max>5, si no 1. */
+function axisTicks(max: number): number[] {
+  const step = max > 5 ? 2 : 1;
+  const out: number[] = [];
+  for (let t = max; t > 0; t -= step) out.push(t);
+  out.push(0);
+  return out;
 }
 
 /** Devuelve las claves (año-mes) de los últimos `n` meses, del más antiguo al actual. */
@@ -78,7 +88,9 @@ export default async function InicioPage() {
     supabase
       .from("assets")
       .select("id, name, status, progress, desired_result, due_at, ended_at"),
-    supabase.from("incidents").select("status, created_at, resolved_at"),
+    supabase
+      .from("incidents")
+      .select("status, title, created_at, resolved_at"),
   ]);
 
   const assets = (assetsRes.data ?? []) as AssetRow[];
@@ -127,23 +139,33 @@ export default async function InicioPage() {
 
   // --- Gráfico A: activos terminados por mes (por ended_at) ---
   const months = lastMonths(6);
-  const assetsByMonth = months.map((m) => ({
-    label: m.label,
-    value: done.filter((a) => monthKey(a.ended_at) === m.key).length,
-  }));
+  const assetsByMonth = months.map((m) => {
+    const items = done
+      .filter((a) => monthKey(a.ended_at) === m.key)
+      .map((a) => a.name);
+    return { label: m.label, value: items.length, items };
+  });
   const assetsMax = Math.max(1, ...assetsByMonth.map((d) => d.value));
+  const assetsTicks = axisTicks(assetsMax);
 
   // --- Gráfico B: incidencias por mes (por created_at), resueltas/abiertas ---
   const incidentsByMonth = months.map((m) => {
     const inMonth = incidents.filter((i) => monthKey(i.created_at) === m.key);
-    const resolved = inMonth.filter((i) => i.resolved_at).length;
-    const open = inMonth.length - resolved;
-    return { label: m.label, resolved, open };
+    const resolvedItems = inMonth.filter((i) => i.resolved_at).map((i) => i.title);
+    const openItems = inMonth.filter((i) => !i.resolved_at).map((i) => i.title);
+    return {
+      label: m.label,
+      resolved: resolvedItems.length,
+      open: openItems.length,
+      resolvedItems,
+      openItems,
+    };
   });
   const incidentsMax = Math.max(
     1,
     ...incidentsByMonth.map((d) => d.resolved + d.open),
   );
+  const incidentsTicks = axisTicks(incidentsMax);
 
   return (
     <div className="portal-reveal space-y-4">
@@ -245,7 +267,7 @@ export default async function InicioPage() {
         </Link>
       )}
 
-      {/* 2 gráficos con datos reales agregados */}
+      {/* 2 gráficos con datos reales agregados — eje Y + hover por barra */}
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="border-border bg-card rounded-[22px] border p-6 shadow-[var(--shadow-sm)]">
           <h2 className="text-foreground text-base font-bold tracking-tight">
@@ -254,25 +276,60 @@ export default async function InicioPage() {
           <p className="text-muted-foreground mb-5 text-[13px]">
             Entregados en los últimos 6 meses
           </p>
-          <div className="flex h-[132px] items-end gap-2.5">
+          <div className="flex h-[132px] items-stretch gap-2.5 px-0.5">
+            {/* Eje Y (índices) */}
+            <div className="flex flex-col">
+              <div className="flex flex-1 flex-col items-end justify-between">
+                {assetsTicks.map((t) => (
+                  <span
+                    key={t}
+                    className="text-muted-foreground font-mono text-[10px] leading-none"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <span className="invisible text-[11.5px] leading-none">0</span>
+            </div>
             {assetsByMonth.map((d, i) => (
               <div
                 key={i}
-                className="flex h-full flex-1 flex-col items-center gap-2"
+                className="group relative flex h-full flex-1 flex-col items-center gap-2"
               >
                 <div className="flex w-full flex-1 items-end justify-center">
                   <div
-                    className="bg-brand w-[68%] max-w-[34px] rounded-t-md"
+                    className="bg-brand w-[68%] max-w-[34px] rounded-t-md transition-[filter] group-hover:brightness-110"
                     style={{
                       height: `${(d.value / assetsMax) * 100}%`,
                       minHeight: d.value > 0 ? 4 : 0,
                     }}
-                    title={`${d.value}`}
                   />
                 </div>
                 <span className="text-muted-foreground text-[11.5px]">
                   {d.label}
                 </span>
+                {d.value > 0 && (
+                  <div className="border-border bg-card pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-20 w-max max-w-[240px] -translate-x-1/2 translate-y-1 rounded-2xl border p-3.5 opacity-0 shadow-[var(--shadow-md)] transition-all group-hover:translate-y-0 group-hover:opacity-100">
+                    <div className="mb-2 flex items-baseline justify-between gap-3">
+                      <span className="text-muted-foreground text-[11px] font-bold tracking-[0.06em] uppercase">
+                        {d.label} · entregados
+                      </span>
+                      <span className="text-brand-accent font-mono text-xs font-bold">
+                        {d.value}
+                      </span>
+                    </div>
+                    <ul className="flex flex-col gap-1.5">
+                      {d.items.map((name, j) => (
+                        <li key={j} className="flex items-center gap-2">
+                          <span className="bg-success-foreground size-1.5 shrink-0 rounded-full" />
+                          <span className="text-foreground/90 text-[12.5px]">
+                            {name}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -292,17 +349,31 @@ export default async function InicioPage() {
               Abiertas
             </span>
           </div>
-          <div className="flex h-[132px] items-end gap-2.5">
+          <div className="flex h-[132px] items-stretch gap-2.5 px-0.5">
+            {/* Eje Y (índices) */}
+            <div className="flex flex-col">
+              <div className="flex flex-1 flex-col items-end justify-between">
+                {incidentsTicks.map((t) => (
+                  <span
+                    key={t}
+                    className="text-muted-foreground font-mono text-[10px] leading-none"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <span className="invisible text-[11.5px] leading-none">0</span>
+            </div>
             {incidentsByMonth.map((d, i) => {
               const total = d.resolved + d.open;
               return (
                 <div
                   key={i}
-                  className="flex h-full flex-1 flex-col items-center gap-2"
+                  className="group relative flex h-full flex-1 flex-col items-center gap-2"
                 >
                   <div className="flex w-full flex-1 items-end justify-center">
                     <div
-                      className="flex w-[68%] max-w-[34px] flex-col overflow-hidden rounded-t-md"
+                      className="flex w-[68%] max-w-[34px] flex-col overflow-hidden rounded-t-md transition-[filter] group-hover:brightness-110"
                       style={{
                         height: `${(total / incidentsMax) * 100}%`,
                         minHeight: total > 0 ? 4 : 0,
@@ -320,6 +391,66 @@ export default async function InicioPage() {
                   <span className="text-muted-foreground text-[11.5px]">
                     {d.label}
                   </span>
+                  {total > 0 && (
+                    <div className="border-border bg-card pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-20 w-max max-w-[240px] -translate-x-1/2 translate-y-1 rounded-2xl border p-3.5 opacity-0 shadow-[var(--shadow-md)] transition-all group-hover:translate-y-0 group-hover:opacity-100">
+                      <div className="mb-2 flex items-baseline justify-between gap-3">
+                        <span className="text-muted-foreground text-[11px] font-bold tracking-[0.06em] uppercase">
+                          {d.label} · incidencias
+                        </span>
+                        <span className="text-brand-accent font-mono text-xs font-bold">
+                          {total}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2.5">
+                        {d.open > 0 && (
+                          <div>
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className="bg-warning-foreground size-2 shrink-0 rounded-full" />
+                              <span className="text-foreground text-[11.5px] font-bold">
+                                Abiertas
+                              </span>
+                              <span className="text-muted-foreground ml-auto font-mono text-[11px] font-semibold">
+                                {d.open}
+                              </span>
+                            </div>
+                            <ul className="flex flex-col gap-0.5 pl-4">
+                              {d.openItems.map((t, j) => (
+                                <li
+                                  key={j}
+                                  className="text-foreground/90 text-[12px]"
+                                >
+                                  {t}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {d.resolved > 0 && (
+                          <div>
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className="bg-success-foreground size-2 shrink-0 rounded-full" />
+                              <span className="text-foreground text-[11.5px] font-bold">
+                                Resueltas
+                              </span>
+                              <span className="text-muted-foreground ml-auto font-mono text-[11px] font-semibold">
+                                {d.resolved}
+                              </span>
+                            </div>
+                            <ul className="flex flex-col gap-0.5 pl-4">
+                              {d.resolvedItems.map((t, j) => (
+                                <li
+                                  key={j}
+                                  className="text-foreground/90 text-[12px]"
+                                >
+                                  {t}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

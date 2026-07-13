@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   IconAlert,
   IconAssets,
+  IconBuilding,
   IconCalendar,
   IconChat,
   IconHome,
@@ -177,15 +178,22 @@ export function PortalNav({
           </div>
 
           <div className="border-border border-t pt-3">
+            {/* Empresa — encima del usuario */}
+            <div className="mb-2.5 flex items-center gap-2 px-1">
+              <span className="bg-accent text-brand-accent flex size-[26px] shrink-0 items-center justify-center rounded-lg">
+                <IconBuilding width={15} height={15} />
+              </span>
+              <span className="text-foreground truncate text-[13px] font-semibold">
+                {companyName}
+              </span>
+            </div>
+            {/* Usuario */}
             <div className="mb-2 flex items-center gap-2.5 px-1">
               <span className="bg-accent text-brand-accent flex size-[34px] shrink-0 items-center justify-center rounded-full text-sm font-bold">
                 {initials}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-foreground truncate text-[13px] font-semibold">
-                  {companyName}
-                </div>
-                <div className="text-muted-foreground truncate text-[11.5px]">
+                <div className="text-muted-foreground truncate text-[12px]">
                   {email}
                 </div>
               </div>

@@ -26,8 +26,7 @@ interface MeetingType {
   desc: string;
 }
 
-// Tipos de reunión del diseño. `protos` solo se muestra si algún consultor lo
-// ofrece (ver `availableTypes`).
+// Tipos de reunión ofrecidos: solo Astrapi y Areté (Prótos no se muestra).
 const MEETING_TYPES: MeetingType[] = [
   {
     key: "astrapi",
@@ -42,13 +41,6 @@ const MEETING_TYPES: MeetingType[] = [
     glyph: "🏛️",
     dur: "60 min",
     desc: "Nuevas peticiones, mejoras o evoluciones de tu sistema.",
-  },
-  {
-    key: "protos",
-    name: "Prótos",
-    glyph: "🧭",
-    dur: "45 min",
-    desc: "Seguimiento estratégico.",
   },
 ];
 

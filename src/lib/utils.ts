@@ -13,6 +13,17 @@ export function nameFromEmail(email: string): string {
   return first.charAt(0).toUpperCase() + first.slice(1);
 }
 
+/** Nombre y apellido a partir del correo (parte local, cada palabra capitalizada). */
+export function fullNameFromEmail(email: string): string {
+  const local = (email.split("@")[0] || "").trim();
+  if (!local) return "";
+  return local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 /** Iniciales (1-2 letras) a partir del correo. */
 export function initialsFromEmail(email: string): string {
   const local = (email.split("@")[0] || "").trim();

@@ -230,11 +230,6 @@ export default async function InicioPage() {
                 <div className="text-foreground text-[15px] font-bold tracking-tight">
                   {session?.companyName ?? "Activos Kairos"}
                 </div>
-                {session.sector && (
-                  <div className="text-muted-foreground text-[13px]">
-                    {session.sector}
-                  </div>
-                )}
               </div>
             </div>
           </div>

@@ -18,7 +18,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MeetingModal } from "@/components/meeting-modal";
 import { IncidentModal } from "@/components/incident-modal";
-import { cn, initialsFromEmail } from "@/lib/utils";
+import { cn, fullNameFromEmail, initialsFromEmail } from "@/lib/utils";
 
 type NavItem = {
   href: string;
@@ -204,7 +204,10 @@ export function PortalNav({
                 {initials}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-muted-foreground truncate text-[12px]">
+                <div className="text-foreground truncate text-[13px] font-semibold">
+                  {fullNameFromEmail(email)}
+                </div>
+                <div className="text-muted-foreground truncate text-[11.5px]">
                   {email}
                 </div>
               </div>

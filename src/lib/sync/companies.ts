@@ -78,9 +78,16 @@ export async function syncCompanies() {
       const page: any = await notion.pages.retrieve({ page_id: c.notion_id });
       const props = page.properties ?? {};
 
-      const patch: Record<string, string | null> = {
+      const estado = props?.["Estado"]?.status?.name ?? null;
+      const esTempo = props?.["Es Tempo?"]?.formula?.boolean === true;
+      const tieneMembresia = (props?.["Membresía"]?.relation?.length ?? 0) > 0;
+
+      const patch: Record<string, string | boolean | null> = {
         plan: derivePlan(props),
         sector: props?.["Sector"]?.select?.name ?? null,
+        estado,
+        // Es o ha sido cliente: Estado Cliente, o con membresía, o Es Tempo.
+        is_client: estado === "Cliente" || esTempo || tieneMembresia,
       };
 
       // Logo (opcional): descargar y re-hospedar si existe.

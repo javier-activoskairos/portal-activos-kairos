@@ -27,6 +27,10 @@ const FILTERS = [
   { key: "resueltas", label: "Resueltas" },
 ];
 
+// Alta de incidencia por el cliente: formulario Tally (lo procesa el equipo
+// Kairos, que crea la incidencia en Notion). Fuente única de la URL.
+const TALLY_INCIDENCIA_URL = "https://tally.so/r/eq6O0E";
+
 const OPEN = new Set([
   "Pendiente",
   "Solucionando",
@@ -195,13 +199,36 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
 
       {/* Abiertas — grid de tarjetas */}
       <section>
-        <div className="mb-3.5 flex items-center gap-2.5">
-          <h2 className="text-foreground text-[17px] font-bold tracking-tight">
-            Abiertas
-          </h2>
-          <span className="text-warning-foreground bg-warning rounded-full px-2.5 py-0.5 font-mono text-xs font-semibold">
-            {open.length}
-          </span>
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-foreground text-[17px] font-bold tracking-tight">
+              Abiertas
+            </h2>
+            <span className="text-warning-foreground bg-warning rounded-full px-2.5 py-0.5 font-mono text-xs font-semibold">
+              {open.length}
+            </span>
+          </div>
+          <a
+            href={TALLY_INCIDENCIA_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border-border bg-card text-foreground hover:bg-secondary inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-[13.5px] font-semibold shadow-[var(--shadow-sm)] transition-colors"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Añadir incidencia
+          </a>
         </div>
         {open.length === 0 ? (
           <div className="border-border bg-card rounded-[20px] border px-6 py-8 text-center shadow-[var(--shadow-sm)]">

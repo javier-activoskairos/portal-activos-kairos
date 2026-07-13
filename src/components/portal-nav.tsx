@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -79,13 +79,7 @@ export function PortalNav({
         style={{ width: SIDEBAR_W }}
       >
         <Link href="/inicio" className="flex items-center gap-3 px-2 pt-1 pb-5">
-          <Image
-            src="/isotipo.png"
-            alt="Activos Kairos"
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded-[9px]"
-          />
+          <BrandMark size={32} radius={9} />
           <span className="text-foreground text-[15px] font-bold tracking-tight">
             Activos Kairos
           </span>
@@ -181,13 +175,7 @@ export function PortalNav({
       {/* ---------- Barra superior (móvil <900px) ---------- */}
       <header className="border-border bg-background/80 sticky top-0 z-40 flex items-center gap-2 border-b px-4 py-2.5 backdrop-blur-md min-[900px]:hidden">
         <Link href="/inicio" className="flex shrink-0 items-center">
-          <Image
-            src="/isotipo.png"
-            alt="Activos Kairos"
-            width={28}
-            height={28}
-            className="h-7 w-7 rounded-lg"
-          />
+          <BrandMark size={28} radius={8} />
         </Link>
         <nav className="flex flex-1 gap-1 overflow-x-auto">
           {NAV_ITEMS.map((item) => {

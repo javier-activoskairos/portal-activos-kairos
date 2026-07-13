@@ -1,19 +1,16 @@
+import { BrandMark } from "@/components/brand-mark";
+
 export default function PortalLoading() {
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <div className="bg-muted h-3 w-20 animate-pulse rounded-full" />
-        <div className="bg-muted h-8 w-56 animate-pulse rounded-full" />
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-5 text-center">
+      <BrandMark size={54} radius={15} className="animate-pulse" />
+      <div className="space-y-1">
+        <p className="text-foreground text-lg font-bold tracking-tight">
+          Activos Kairos
+        </p>
+        <p className="text-muted-foreground text-sm">Cargando tu portal…</p>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="border-border bg-card h-24 animate-pulse rounded-[20px] border"
-          />
-        ))}
-      </div>
-      <div className="border-border bg-card h-40 animate-pulse rounded-[20px] border" />
+      <div className="border-brand/30 border-t-brand h-6 w-6 animate-spin rounded-full border-2" />
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Suspense } from "react";
+import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "./login-form";
 
@@ -23,14 +23,7 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-[420px]">
         <div className="mb-7 flex items-center gap-3">
-          <Image
-            src="/isotipo.png"
-            alt="Activos Kairos"
-            width={38}
-            height={38}
-            priority
-            className="h-[38px] w-[38px] rounded-[11px]"
-          />
+          <BrandMark size={38} radius={11} />
           <span className="text-foreground text-base font-semibold tracking-tight">
             Activos Kairos
           </span>

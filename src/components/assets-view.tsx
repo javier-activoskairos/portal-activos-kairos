@@ -185,13 +185,15 @@ function AssetCard({ a, onOpen }: { a: AssetRow; onOpen: () => void }) {
 function AssetTable({
   rows,
   onOpen,
+  showPlazo = true,
 }: {
   rows: AssetRow[];
   onOpen: (id: string) => void;
+  showPlazo?: boolean;
 }) {
   return (
     <div className="border-border bg-card overflow-x-auto rounded-[18px] border shadow-[var(--shadow-sm)]">
-      <table className="w-full min-w-[620px] border-collapse">
+      <table className="w-full min-w-[520px] border-collapse">
         <thead>
           <tr>
             <th className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase">
@@ -203,9 +205,11 @@ function AssetTable({
             <th className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase">
               Prioridad
             </th>
-            <th className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase">
-              Plazo
-            </th>
+            {showPlazo && (
+              <th className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase">
+                Plazo
+              </th>
+            )}
             <th className="w-11 px-[18px] py-3.5" />
           </tr>
         </thead>
@@ -230,9 +234,11 @@ function AssetTable({
                     spec={priorityBadge(a.priority)}
                   />
                 </td>
-                <td className="text-muted-foreground px-[18px] py-4 align-middle text-sm whitespace-nowrap">
-                  {d.plazo}
-                </td>
+                {showPlazo && (
+                  <td className="text-muted-foreground px-[18px] py-4 align-middle text-sm whitespace-nowrap">
+                    {d.plazo}
+                  </td>
+                )}
                 <td className="text-muted-foreground px-[18px] py-4 align-middle">
                   <IconArrow width={16} height={16} />
                 </td>
@@ -248,8 +254,26 @@ function AssetTable({
 /** Vista de detalle de un activo (estado + progreso + checklist de tareas). */
 function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
   const d = derive(a);
+  const isProp = a.status === "Por Empezar";
   const tasks = a.tasks ?? [];
   const doneCount = tasks.filter((t) => t.state === "done").length;
+
+  // Tareas agrupadas por estado y ordenadas por su número ("12. …").
+  const numOf = (name: string) => {
+    const m = name.match(/^\s*(\d+)[.)]/);
+    return m ? parseInt(m[1], 10) : Number.POSITIVE_INFINITY;
+  };
+  const taskGroups = (["todo", "doing", "done"] as AssetTask["state"][])
+    .map((state) => ({
+      state,
+      items: tasks
+        .filter((t) => t.state === state)
+        .sort(
+          (x, y) =>
+            numOf(x.name) - numOf(y.name) || x.name.localeCompare(y.name),
+        ),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <div className="portal-reveal space-y-4">
@@ -266,14 +290,19 @@ function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
         <p className="text-brand-accent mb-3 text-xs font-semibold tracking-[0.12em] uppercase">
           Activo Kairos
         </p>
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-          <h1 className="text-foreground max-w-[20ch] text-2xl leading-tight font-extrabold tracking-tight">
+        <div className="mb-5">
+          <h1 className="text-foreground max-w-[24ch] text-2xl leading-tight font-extrabold tracking-tight">
             {a.name}
           </h1>
-          <StatusBadge label={d.statusLabel} spec={d.badge} />
         </div>
 
         <div className="mb-6 grid [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))] gap-4">
+          <div>
+            <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
+              Estado
+            </div>
+            <StatusBadge label={d.statusLabel} spec={d.badge} />
+          </div>
           <div>
             <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
               Prioridad
@@ -282,22 +311,6 @@ function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
               label={priorityLabel(a.priority)}
               spec={priorityBadge(a.priority)}
             />
-          </div>
-          <div>
-            <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
-              Plazo
-            </div>
-            <div className="text-foreground text-[15px] font-semibold">
-              {d.plazo}
-            </div>
-          </div>
-          <div>
-            <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
-              Estado
-            </div>
-            <div className="text-foreground text-[15px] font-semibold">
-              {d.statusLabel}
-            </div>
           </div>
         </div>
 
@@ -309,11 +322,13 @@ function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
 
         <div className="mb-2 flex items-center justify-between gap-3">
           <span className="text-muted-foreground text-[13px]">Progreso</span>
-          <span
-            className={cn("font-mono text-[13px] font-semibold", d.pctColor)}
-          >
-            {d.pctLabel}
-          </span>
+          {!isProp && (
+            <span
+              className={cn("font-mono text-[13px] font-semibold", d.pctColor)}
+            >
+              {d.pctLabel}
+            </span>
+          )}
         </div>
         <div className="bg-muted h-2.5 overflow-hidden rounded-full">
           <div
@@ -340,52 +355,59 @@ function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
             Sin tareas registradas.
           </p>
         ) : (
-          <div className="flex flex-col">
-            {tasks.map((t, i) => {
-              const done = t.state === "done";
-              return (
-                <div
-                  key={`${t.name}-${i}`}
-                  className={cn(
-                    "flex items-center justify-between gap-3 py-3.5",
-                    i > 0 && "border-border/60 border-t",
-                  )}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "flex size-[18px] shrink-0 items-center justify-center rounded-full",
-                        done && "text-white",
-                      )}
-                      style={
-                        done
-                          ? { background: TASK_RING.done }
-                          : {
-                              border: `2px solid ${TASK_RING[t.state]}`,
-                            }
-                      }
-                    >
-                      {done && <IconCheck width={11} height={11} />}
-                    </span>
-                    <span
-                      className={cn(
-                        "text-[14.5px]",
-                        done
-                          ? "text-muted-foreground line-through"
-                          : "text-foreground/90",
-                      )}
-                    >
-                      {t.name}
-                    </span>
+          <div className="flex flex-col gap-6">
+            {taskGroups.map((g) => (
+              <div key={g.state}>
+                <div className="mb-1.5 flex items-center gap-2">
+                  <span className="text-muted-foreground text-[11.5px] font-semibold tracking-[0.08em] uppercase">
+                    {TASK_LABEL[g.state]}
                   </span>
                   <StatusBadge
-                    label={TASK_LABEL[t.state]}
-                    spec={TASK_BADGE[t.state]}
+                    label={String(g.items.length)}
+                    spec={TASK_BADGE[g.state]}
                   />
                 </div>
-              );
-            })}
+                <div className="flex flex-col">
+                  {g.items.map((t, i) => {
+                    const done = t.state === "done";
+                    return (
+                      <div
+                        key={`${t.name}-${i}`}
+                        className={cn(
+                          "flex items-center gap-3 py-3",
+                          i > 0 && "border-border/60 border-t",
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "flex size-[18px] shrink-0 items-center justify-center rounded-full",
+                            done && "text-white",
+                          )}
+                          style={
+                            done
+                              ? { background: TASK_RING.done }
+                              : { border: `2px solid ${TASK_RING[t.state]}` }
+                          }
+                        >
+                          {done && <IconCheck width={11} height={11} />}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-[14.5px]",
+                            done
+                              ? "text-muted-foreground line-through"
+                              : "text-foreground/90",
+                          )}
+                        >
+                          {t.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -406,7 +428,14 @@ export function AssetsView({ assets }: { assets: AssetRow[] }) {
 
   const inProgress = assets.filter((a) => a.status === "En Progreso");
   const propuestos = assets.filter((a) => a.status === "Por Empezar");
-  const implementados = assets.filter((a) => a.status === "Terminado");
+  // Implementados ordenados por plazo (entrega) descendente.
+  const plazoTime = (a: AssetRow) => {
+    const v = a.ended_at ?? a.due_at;
+    return v ? new Date(v).getTime() : 0;
+  };
+  const implementados = assets
+    .filter((a) => a.status === "Terminado")
+    .sort((a, b) => plazoTime(b) - plazoTime(a));
 
   if (selected) {
     return <AssetDetail a={selected} onBack={() => setSelectedId(null)} />;
@@ -498,7 +527,11 @@ export function AssetsView({ assets }: { assets: AssetRow[] }) {
         </div>
 
         {tableRows.length > 0 ? (
-          <AssetTable rows={tableRows} onOpen={setSelectedId} />
+          <AssetTable
+            rows={tableRows}
+            onOpen={setSelectedId}
+            showPlazo={view === "implementados"}
+          />
         ) : (
           <div className="border-border bg-card rounded-[20px] border px-6 py-10 text-center shadow-[var(--shadow-sm)]">
             <div className="text-foreground text-[15px] font-semibold">

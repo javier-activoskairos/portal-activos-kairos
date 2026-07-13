@@ -14,9 +14,12 @@ export function IncidentModal({
   const [titulo, setTitulo] = useState("");
   const [contexto, setContexto] = useState("");
   const [loom, setLoom] = useState("");
+  const [imagen, setImagen] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+
+  const MAX_IMAGE_MB = 8;
 
   // Reset del formulario al cerrar (patrón de ajuste de estado en render por
   // cambio de prop; evita setState dentro de un efecto).
@@ -27,6 +30,7 @@ export function IncidentModal({
       setTitulo("");
       setContexto("");
       setLoom("");
+      setImagen(null);
       setLoading(false);
       setError(null);
       setSent(false);
@@ -49,17 +53,21 @@ export function IncidentModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid || loading) return;
+    if (imagen && imagen.size > MAX_IMAGE_MB * 1024 * 1024) {
+      setError(`La imagen supera el tamaño máximo (${MAX_IMAGE_MB} MB).`);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
+      const form = new FormData();
+      form.append("titulo", titulo.trim());
+      form.append("contexto", contexto.trim());
+      form.append("loom", loom.trim());
+      if (imagen) form.append("imagen", imagen);
       const res = await fetch("/api/incidencias", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          titulo: titulo.trim(),
-          contexto: contexto.trim(),
-          loom: loom.trim(),
-        }),
+        body: form,
       });
       if (!res.ok) {
         throw new Error("request failed");
@@ -177,6 +185,40 @@ export function IncidentModal({
                   placeholder="https://www.loom.com/share/…"
                   className={fieldClass}
                 />
+              </div>
+              <div>
+                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                  Imagen asociada{" "}
+                  <span className="text-muted-foreground font-medium">
+                    (opcional)
+                  </span>
+                </label>
+                {imagen ? (
+                  <div className="border-border bg-muted/60 flex items-center gap-3 rounded-xl border px-3 py-2.5">
+                    <span className="text-foreground min-w-0 flex-1 truncate text-sm">
+                      {imagen.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setImagen(null)}
+                      className="text-muted-foreground hover:text-foreground shrink-0 text-[12.5px] font-medium"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    className={`${fieldClass} text-muted-foreground flex cursor-pointer items-center gap-2 hover:border-brand/50`}
+                  >
+                    <span>Subir una captura o foto…</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => setImagen(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                )}
               </div>
             </div>
 

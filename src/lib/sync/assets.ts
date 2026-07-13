@@ -12,9 +12,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-// Estados de Activo visibles para el cliente: Propuesto (Por Empezar),
+// Estados de Activo visibles para el cliente: Propuesto (Bandeja / Por Empezar),
 // En Progreso y Terminado.
 const VISIBLE = new Set(["Por Empezar", "En Progreso", "Terminado"]);
+
+// "Bandeja" (bandeja de propuestas) se muestra como Propuesto = "Por Empezar".
+function normalizeStatus(status: string | null): string {
+  return status === "Bandeja" ? "Por Empezar" : (status ?? "");
+}
 
 // [AKC] - Tareas (database_id). Cada tarea enlaza a un Activo Kairos.
 const TAREAS_DB = "2740114d-3502-8012-8e9f-e810ed1020a8";
@@ -33,7 +38,7 @@ function mapAsset(page: any, companyId: string) {
     notion_id: page.id as string,
     company_id: companyId,
     name: plainText(p["Nombre"]) ?? "(sin nombre)",
-    status: statusName(p["Estado"]) ?? "",
+    status: normalizeStatus(statusName(p["Estado"])),
     desired_result: plainText(p["Resultado Deseado"]),
     progress: formulaValue(p["Progreso"]),
     priority: p["Prioridad"]?.select?.name ?? null,

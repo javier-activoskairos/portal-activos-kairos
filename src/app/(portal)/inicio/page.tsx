@@ -31,6 +31,13 @@ const MONTHS_ES = [
   "Dic",
 ];
 
+// Color por tipo de KPI; se atenúa a gris cuando el valor es 0 (condicional).
+const KPI_TONE = {
+  blue: { fg: "text-blue-500", border: "border-blue-500/30" },
+  orange: { fg: "text-brand-accent", border: "border-[var(--brand-accent)]/35" },
+  red: { fg: "text-red-500", border: "border-red-500/30" },
+} as const;
+
 interface AssetRow {
   id: string;
   name: string;
@@ -106,6 +113,7 @@ export default async function InicioPage() {
   const assets = (assetsRes.data ?? []) as AssetRow[];
   const incidents = (incidentsRes.data ?? []) as IncidentRow[];
 
+  const proposed = assets.filter((a) => a.status === "Por Empezar");
   const inProgress = assets.filter((a) => a.status === "En Progreso");
   const done = assets.filter((a) => a.status === "Terminado");
   const openIncidents = incidents.filter((i) =>
@@ -113,29 +121,28 @@ export default async function InicioPage() {
   ).length;
 
   const firstName = nameFromEmail(session?.email ?? "");
-  const roleLabel = session?.role === "admin" ? "Administrador" : "Cliente";
 
   const kpis = [
+    {
+      label: "Activos propuestos",
+      value: proposed.length,
+      href: "/activos",
+      icon: IconAssets,
+      tone: "blue" as const,
+    },
     {
       label: "Activos en construcción",
       value: inProgress.length,
       href: "/activos",
       icon: IconAssets,
-      accent: true,
-    },
-    {
-      label: "Activos terminados",
-      value: done.length,
-      href: "/activos",
-      icon: IconAssets,
-      accent: false,
+      tone: "orange" as const,
     },
     {
       label: "Incidencias abiertas",
       value: openIncidents,
       href: "/incidencias",
       icon: IconAlert,
-      accent: false,
+      tone: "red" as const,
     },
   ];
 
@@ -182,60 +189,83 @@ export default async function InicioPage() {
         </h1>
       </div>
 
-      {/* Cabecera: empresa + rol */}
-      <div className="border-border bg-card relative overflow-hidden rounded-[22px] border p-6 shadow-[var(--shadow-sm)]">
-        <p className="text-brand-accent text-[11.5px] font-bold tracking-[0.14em] uppercase">
-          Tu empresa
-        </p>
-        <div className="mt-3 flex items-center gap-3">
-          {session.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={session.logoUrl}
-              alt={session.companyName}
-              className="border-border bg-card size-[42px] shrink-0 rounded-xl border object-contain p-1"
-            />
-          ) : (
-            <span className="bg-accent text-brand-accent flex size-[42px] shrink-0 items-center justify-center rounded-xl">
-              <IconBuilding />
-            </span>
-          )}
-          <div className="min-w-0">
-            <div className="text-foreground text-lg font-bold tracking-tight">
-              {session?.companyName ?? "Activos Kairos"}
+      {/* Cabecera: Tu Plan (izquierda) + Empresa (derecha) */}
+      <div
+        className="border-border bg-card relative overflow-hidden rounded-[22px] border p-6 shadow-[var(--shadow-sm)]"
+        style={{
+          backgroundImage:
+            "linear-gradient(120deg, color-mix(in oklch, var(--brand), transparent 90%), transparent 55%)",
+        }}
+      >
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:gap-8">
+          <div className="min-w-0 flex-1">
+            <p className="text-brand-accent text-[11.5px] font-bold tracking-[0.14em] uppercase">
+              Tu plan
+            </p>
+            <div className="text-foreground mt-1.5 text-[28px] leading-none font-extrabold tracking-tight">
+              {session.plan ?? "Sin plan"}
             </div>
-            <div className="text-muted-foreground text-[13px]">{roleLabel}</div>
+            <p className="text-muted-foreground mt-2 max-w-[42ch] text-[14px] leading-relaxed">
+              Cada mes tu empresa suma más activos y más valor.
+            </p>
+          </div>
+          <div className="md:border-border shrink-0 md:border-l md:pl-8">
+            <p className="text-muted-foreground text-[11px] font-bold tracking-[0.12em] uppercase">
+              Empresa
+            </p>
+            <div className="mt-2.5 flex items-center gap-3">
+              {session.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={session.logoUrl}
+                  alt={session.companyName}
+                  className="border-border bg-card size-[42px] shrink-0 rounded-xl border object-contain p-1"
+                />
+              ) : (
+                <span className="bg-accent text-brand-accent flex size-[42px] shrink-0 items-center justify-center rounded-xl">
+                  <IconBuilding />
+                </span>
+              )}
+              <div className="min-w-0">
+                <div className="text-foreground text-[15px] font-bold tracking-tight">
+                  {session?.companyName ?? "Activos Kairos"}
+                </div>
+                {session.sector && (
+                  <div className="text-muted-foreground text-[13px]">
+                    {session.sector}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3 KPIs clicables */}
+      {/* 3 KPIs numéricos con color condicional */}
       <div className="grid gap-3 sm:grid-cols-3">
         {kpis.map((k) => {
           const Icon = k.icon;
+          const active = k.value > 0;
+          const tone = KPI_TONE[k.tone];
           return (
             <Link
               key={k.label}
               href={k.href}
               className={`bg-card rounded-[22px] border p-5 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
-                k.accent ? "border-[var(--brand-accent)]/30" : "border-border"
+                active ? tone.border : "border-border"
               }`}
             >
               <div
                 className={`mb-3.5 flex items-center gap-2 ${
-                  k.accent ? "text-brand-accent" : "text-muted-foreground"
+                  active ? tone.fg : "text-muted-foreground"
                 }`}
               >
                 <Icon width={17} height={17} />
-                <span
-                  className={`text-[13px] ${k.accent ? "font-semibold" : ""}`}
-                >
-                  {k.label}
-                </span>
+                <span className="text-[13px] font-semibold">{k.label}</span>
               </div>
               <div
                 className={`text-[40px] leading-none font-extrabold tracking-tight tabular-nums ${
-                  k.accent ? "text-brand-accent" : "text-foreground"
+                  active ? tone.fg : "text-muted-foreground"
                 }`}
               >
                 {k.value}

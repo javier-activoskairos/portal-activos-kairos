@@ -12,6 +12,8 @@ export interface PortalSession {
   companyId: string;
   companyName: string;
   logoUrl: string | null;
+  plan: string | null;
+  sector: string | null;
   role: "client" | "admin";
   /** Presente si un admin está previsualizando el portal de otro cliente. */
   viewingAs?: { companyId: string; companyName: string };
@@ -42,7 +44,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
 
   const { data: company } = await supabase
     .from("companies")
-    .select("name, logo_url")
+    .select("name, logo_url, plan, sector")
     .eq("id", pu.company_id)
     .maybeSingle();
 
@@ -52,6 +54,8 @@ export async function getPortalSession(): Promise<PortalSession | null> {
     companyId: pu.company_id,
     companyName: company?.name ?? "Activos Kairos",
     logoUrl: company?.logo_url ?? null,
+    plan: company?.plan ?? null,
+    sector: company?.sector ?? null,
     role: pu.role as "client" | "admin",
   };
 
@@ -63,13 +67,15 @@ export async function getPortalSession(): Promise<PortalSession | null> {
       const admin = createAdminClient();
       const { data: tgt } = await admin
         .from("companies")
-        .select("id, name, logo_url")
+        .select("id, name, logo_url, plan, sector")
         .eq("id", target)
         .maybeSingle();
       if (tgt) {
         session.companyId = tgt.id;
         session.companyName = tgt.name ?? "Cliente";
         session.logoUrl = tgt.logo_url ?? null;
+        session.plan = tgt.plan ?? null;
+        session.sector = tgt.sector ?? null;
         session.viewingAs = {
           companyId: tgt.id,
           companyName: tgt.name ?? "Cliente",

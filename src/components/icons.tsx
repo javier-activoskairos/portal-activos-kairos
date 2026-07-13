@@ -204,6 +204,31 @@ export function IconBilling({ width = 19, height = 19, ...p }: IconProps) {
   );
 }
 
+export function IconRefresh({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      {...base}
+      strokeWidth={2}
+      {...p}
+    >
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
+    </svg>
+  );
+}
+
+export function IconFile({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 2v6h6" />
+    </svg>
+  );
+}
+
 export function IconTemple({ width = 18, height = 18, ...p }: IconProps) {
   return (
     <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>

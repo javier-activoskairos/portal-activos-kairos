@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
-import { IconArrowLeft } from "@/components/icons";
+import { IconArrowLeft, IconFile, IconRefresh } from "@/components/icons";
 import { Input } from "@/components/ui/input";
+import { ReopenIncidentModal } from "@/components/reopen-incident-modal";
 import { formatDate, incidentBadge, labelBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ export interface IncidentRow {
   error_url: string | null;
   created_at: string | null;
   created_by: string | null;
+  attachments: { name: string; url: string }[] | null;
   resolved_at: string | null;
   sla_deadline: string | null;
 }
@@ -40,26 +42,46 @@ function isOpen(i: IncidentRow) {
   return OPEN.has(i.status);
 }
 
+function isImageUrl(url: string) {
+  return /\.(png|jpe?g|webp|gif|svg|avif)(\?|$)/i.test(url);
+}
+
 /** Panel de detalle con los campos reales de la incidencia. */
 function IncidentDetail({
   incident,
   onBack,
+  onReopen,
 }: {
   incident: IncidentRow;
   onBack: () => void;
+  onReopen: () => void;
 }) {
   const badge = incidentBadge(incident.status);
   const label = labelBadge(incident.label);
+  const attachments = incident.attachments ?? [];
+  const resolved = !isOpen(incident);
   return (
     <div className="portal-reveal space-y-4">
-      <button
-        type="button"
-        onClick={onBack}
-        className="text-muted-foreground hover:text-foreground -ml-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13.5px] font-medium transition-colors"
-      >
-        <IconArrowLeft width={16} height={16} />
-        Volver a Incidencias
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-muted-foreground hover:text-foreground -ml-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13.5px] font-medium transition-colors"
+        >
+          <IconArrowLeft width={16} height={16} />
+          Volver a Incidencias
+        </button>
+        {resolved && (
+          <button
+            type="button"
+            onClick={onReopen}
+            className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors"
+          >
+            <IconRefresh width={15} height={15} />
+            Reabrir incidencia
+          </button>
+        )}
+      </div>
 
       <div className="border-border bg-card rounded-[22px] border p-7 shadow-[var(--shadow-sm)]">
         <p className="text-brand-accent mb-3 text-xs font-semibold tracking-[0.12em] uppercase">
@@ -135,6 +157,53 @@ function IncidentDetail({
             {incident.response || "Aún sin respuesta."}
           </p>
         </div>
+        <div className="border-border/60 border-t pt-5">
+          <div className="text-muted-foreground mb-2.5 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
+            Archivos
+          </div>
+          {attachments.length === 0 ? (
+            <div className="text-muted-foreground text-[14.5px]">
+              Sin archivo adjunto
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2.5">
+              {attachments.map((f, i) =>
+                isImageUrl(f.url) ? (
+                  <a
+                    key={i}
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={f.name}
+                    className="border-border bg-muted block overflow-hidden rounded-xl border transition-opacity hover:opacity-90"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={f.url}
+                      alt={f.name}
+                      className="h-[86px] w-[86px] object-cover"
+                    />
+                  </a>
+                ) : (
+                  <a
+                    key={i}
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border-border bg-muted hover:bg-card flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 transition-colors"
+                  >
+                    <span className="bg-accent text-brand-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
+                      <IconFile width={16} height={16} />
+                    </span>
+                    <span className="text-foreground max-w-[22ch] truncate text-[13.5px] font-semibold">
+                      {f.name}
+                    </span>
+                  </a>
+                ),
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -144,6 +213,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("todas");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reopenOpen, setReopenOpen] = useState(false);
 
   const selected = useMemo(
     () => incidents.find((i) => i.id === selectedId) ?? null,
@@ -169,7 +239,19 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
 
   if (selected) {
     return (
-      <IncidentDetail incident={selected} onBack={() => setSelectedId(null)} />
+      <>
+        <IncidentDetail
+          incident={selected}
+          onBack={() => setSelectedId(null)}
+          onReopen={() => setReopenOpen(true)}
+        />
+        <ReopenIncidentModal
+          open={reopenOpen}
+          incidentId={selected.id}
+          incidentTitle={selected.title}
+          onClose={() => setReopenOpen(false)}
+        />
+      </>
     );
   }
 

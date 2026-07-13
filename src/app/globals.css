@@ -37,6 +37,12 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-purple: var(--purple);
+  --color-purple-foreground: var(--purple-foreground);
+  --color-orange: var(--orange);
+  --color-orange-foreground: var(--orange-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -85,6 +91,12 @@
   --warning-foreground: #92400e;
   --danger: #fae7e2;
   --danger-foreground: #b91c1c;
+  --info: rgba(59, 125, 216, 0.13);
+  --info-foreground: #295fa6;
+  --purple: rgba(154, 109, 215, 0.14);
+  --purple-foreground: #6e45a8;
+  --orange: rgba(217, 115, 13, 0.14);
+  --orange-foreground: #a85b08;
 
   /* Sombras cálidas (tintadas con el ink, nunca negro puro) */
   --shadow-sm: 0 1px 2px color-mix(in oklch, var(--foreground), transparent 94%);
@@ -126,6 +138,17 @@
   --warning-foreground: #fcd34d;
   --danger: #4a191480;
   --danger-foreground: #fca5a5;
+  --info: rgba(94, 155, 232, 0.16);
+  --info-foreground: #8fbbf0;
+  --purple: rgba(177, 140, 232, 0.16);
+  --purple-foreground: #c9aef0;
+  --orange: rgba(255, 163, 68, 0.15);
+  --orange-foreground: #ffb870;
+  /* Sombras algo más marcadas sobre fondo oscuro */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md:
+    0 12px 30px -10px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
 }
 
 @layer base {
@@ -137,5 +160,36 @@
   }
   html {
     @apply font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  /* Realce cálido de marca para la sidebar del portal. */
+  .portal-sidebar-glow {
+    background-image:
+      radial-gradient(
+        95% 42% at 0% -6%,
+        color-mix(in oklch, var(--brand), transparent 86%),
+        transparent 58%
+      ),
+      radial-gradient(
+        85% 38% at 100% 106%,
+        color-mix(in oklch, var(--brand), transparent 86%),
+        transparent 62%
+      );
+  }
+  /* Aparición suave de las vistas del portal. */
+  .portal-reveal {
+    animation: portal-reveal 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  @keyframes portal-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 }

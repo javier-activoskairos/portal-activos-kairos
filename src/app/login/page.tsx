@@ -1,33 +1,39 @@
 import Image from "next/image";
 import { Suspense } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Acceder · Portal Activos Kairos" };
 
 export default function LoginPage() {
   return (
-    <main className="bg-background relative flex min-h-screen items-center justify-center px-4">
+    <main className="bg-background relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-8">
       {/* Realce de marca sutil en el fondo */}
       <div
         aria-hidden
-        className="from-accent pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b to-transparent"
+        className="pointer-events-none absolute -top-32 left-1/2 h-[520px] w-[760px] -translate-x-1/2"
+        style={{
+          background:
+            "radial-gradient(50% 60% at 50% 0%, color-mix(in oklch, var(--brand), transparent 86%), transparent 70%)",
+        }}
       />
-      <div className="relative w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
+      <div className="absolute top-5 right-6 z-10">
+        <ThemeToggle />
+      </div>
+
+      <div className="relative w-full max-w-[420px]">
+        <div className="mb-7 flex items-center gap-3">
           <Image
             src="/isotipo.png"
             alt="Activos Kairos"
-            width={56}
-            height={56}
+            width={38}
+            height={38}
             priority
-            className="mb-4 h-14 w-14"
+            className="h-[38px] w-[38px] rounded-[11px]"
           />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Portal Activos Kairos
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Accede con tu correo. Te enviaremos un código.
-          </p>
+          <span className="text-foreground text-base font-semibold tracking-tight">
+            Activos Kairos
+          </span>
         </div>
         <Suspense>
           <LoginForm />

@@ -18,7 +18,11 @@ export default async function PortalLayout({
         companyName={session.companyName}
         isAdmin={session.role === "admin"}
       />
-      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <main className="min-[900px]:ml-[244px]">
+        <div className="mx-auto w-full max-w-[1120px] px-4 py-6 min-[900px]:px-[clamp(24px,4vw,48px)] min-[900px]:py-9 min-[900px]:pb-16">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

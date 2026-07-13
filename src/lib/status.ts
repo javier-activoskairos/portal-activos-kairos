@@ -3,6 +3,9 @@ export type Tone =
   | "success"
   | "warning"
   | "danger"
+  | "info"
+  | "purple"
+  | "orange"
   | "muted"
   | "brandSoft"
   | "outline";
@@ -14,16 +17,23 @@ export interface BadgeSpec {
 
 const INCIDENT_BADGE: Record<string, BadgeSpec> = {
   Pendiente: { tone: "danger", dot: true },
-  Solucionando: { tone: "warning", dot: true },
-  "En Espera": { tone: "warning", dot: true },
-  Escalada: { tone: "danger", dot: true },
+  Solucionando: { tone: "info", dot: true },
+  "En Espera": { tone: "purple", dot: true },
+  Escalada: { tone: "orange", dot: true },
   Solucionada: { tone: "success", dot: false },
   "Solucionada con Acciones Pendientes": { tone: "warning", dot: true },
 };
 
 const ASSET_BADGE: Record<string, BadgeSpec> = {
-  "En Progreso": { tone: "brandSoft", dot: true },
+  "En Progreso": { tone: "info", dot: true },
   Terminado: { tone: "success", dot: false },
+};
+
+// Etiqueta de la incidencia (label) → tono visual.
+const LABEL_BADGE: Record<string, BadgeSpec> = {
+  Error: { tone: "danger", dot: true },
+  Incidencia: { tone: "warning", dot: true },
+  "Incidencia Externa": { tone: "info", dot: true },
 };
 
 export function incidentBadge(status: string): BadgeSpec {
@@ -34,10 +44,18 @@ export function assetBadge(status: string): BadgeSpec {
   return ASSET_BADGE[status] ?? { tone: "muted", dot: false };
 }
 
+export function labelBadge(label: string | null | undefined): BadgeSpec {
+  if (!label) return { tone: "muted", dot: true };
+  return LABEL_BADGE[label] ?? { tone: "muted", dot: true };
+}
+
 export const TONE_CLASS: Record<Tone, string> = {
   success: "bg-success text-success-foreground",
   warning: "bg-warning text-warning-foreground",
   danger: "bg-danger text-danger-foreground",
+  info: "bg-info text-info-foreground",
+  purple: "bg-purple text-purple-foreground",
+  orange: "bg-orange text-orange-foreground",
   brandSoft: "bg-accent-soft text-brand-accent",
   muted: "bg-muted text-muted-foreground",
   outline: "border border-border text-foreground",
@@ -47,6 +65,9 @@ const DOT_CLASS: Record<Tone, string> = {
   success: "bg-success-foreground",
   warning: "bg-warning-foreground",
   danger: "bg-danger-foreground",
+  info: "bg-info-foreground",
+  purple: "bg-purple-foreground",
+  orange: "bg-orange-foreground",
   brandSoft: "bg-brand-accent",
   muted: "bg-muted-foreground",
   outline: "bg-foreground",

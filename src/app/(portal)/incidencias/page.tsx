@@ -9,23 +9,24 @@ export default async function IncidenciasPage() {
   const { data } = await supabase
     .from("incidents")
     .select(
-      "id, title, status, label, source, response, created_at, resolved_at, sla_deadline",
+      "id, title, status, label, source, additional_info, response, error_url, created_at, resolved_at, sla_deadline",
     )
     .order("created_at", { ascending: false });
 
   const incidents = (data ?? []) as IncidentRow[];
 
   return (
-    <div className="space-y-6">
+    <div className="portal-reveal space-y-6">
       <div>
-        <p className="text-brand-accent text-xs font-semibold tracking-wide uppercase">
-          Soporte
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
+        <p className="text-brand-accent text-[12.5px] font-semibold tracking-[0.14em] uppercase">
           Incidencias
+        </p>
+        <h1 className="text-foreground mt-2.5 text-[28px] leading-tight font-extrabold tracking-tight">
+          Todo lo que ha pasado, en tu idioma.
         </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Histórico de incidencias y su estado de resolución.
+        <p className="text-muted-foreground mt-1.5 max-w-[60ch] text-[15px] leading-relaxed">
+          Sin jerga ni herramientas. Cada incidencia dice qué pasó y si ya está
+          resuelta.
         </p>
       </div>
       <IncidentsView incidents={incidents} />

@@ -12,18 +12,31 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-// Solo estos estados son visibles para el cliente en el portal.
-const VISIBLE = new Set(["En Progreso", "Terminado"]);
+// Estados de Activo visibles para el cliente: Propuesto (Por Empezar),
+// En Progreso y Terminado.
+const VISIBLE = new Set(["Por Empezar", "En Progreso", "Terminado"]);
+
+// [AKC] - Tareas (database_id). Cada tarea enlaza a un Activo Kairos.
+const TAREAS_DB = "2740114d-3502-8012-8e9f-e810ed1020a8";
+
+type Task = { name: string; state: "todo" | "doing" | "done" };
+
+function taskState(estado: string | null): Task["state"] {
+  if (estado === "Terminado") return "done";
+  if (estado === "En Progreso") return "doing";
+  return "todo"; // Por Hacer / En Espera
+}
 
 function mapAsset(page: any, companyId: string) {
   const p = page.properties;
   return {
-    notion_id: page.id,
+    notion_id: page.id as string,
     company_id: companyId,
     name: plainText(p["Nombre"]) ?? "(sin nombre)",
     status: statusName(p["Estado"]) ?? "",
     desired_result: plainText(p["Resultado Deseado"]),
     progress: formulaValue(p["Progreso"]),
+    priority: p["Prioridad"]?.select?.name ?? null,
     planned_at: dateStart(p["Planificado"]),
     due_at: dateStart(p["Plazo"]),
     started_at: dateStart(p["Inicio"]),
@@ -31,7 +44,38 @@ function mapAsset(page: any, companyId: string) {
     asset_url: urlValue(p["URL"]), // ← propiedad "URL" de Notion (decisión de Javier)
     notion_url: page.url,
     last_edited_at: page.last_edited_time,
+    tasks: [] as Task[], // se rellena con fetchTasksByAsset
   };
+}
+
+// Trae todas las tareas de la empresa y las agrupa por Activo Kairos.
+async function fetchTasksByAsset(
+  notion: ReturnType<typeof notionClient>,
+  companyNotionId: string,
+): Promise<Map<string, Task[]>> {
+  const byAsset = new Map<string, Task[]>();
+  let cursor: string | undefined = undefined;
+  do {
+    const res: any = await notion.databases.query({
+      database_id: TAREAS_DB,
+      filter: { property: "Empresa", relation: { contains: companyNotionId } },
+      start_cursor: cursor,
+      page_size: 100,
+    });
+    for (const t of res.results) {
+      const estado = statusName(t.properties["Estado"]);
+      if (estado === "Desechado") continue;
+      const assetId: string | undefined =
+        t.properties["Activo Kairos"]?.relation?.[0]?.id;
+      if (!assetId) continue;
+      const name = plainText(t.properties["Nombre"]) ?? "";
+      const arr = byAsset.get(assetId) ?? [];
+      arr.push({ name, state: taskState(estado) });
+      byAsset.set(assetId, arr);
+    }
+    cursor = res.has_more ? res.next_cursor : undefined;
+  } while (cursor);
+  return byAsset;
 }
 
 async function fetchAndUpsert(admin: Admin) {
@@ -39,6 +83,14 @@ async function fetchAndUpsert(admin: Admin) {
   const dbId = process.env.NOTION_ASSETS_DB!;
   const companyNotionId = process.env.AK_COMPANY_NOTION_ID!;
   const companyId = await resolveCompanyId(admin);
+
+  // Tareas por activo (best-effort; si la integración no ve Tareas, quedan []).
+  let tasksByAsset = new Map<string, Task[]>();
+  try {
+    tasksByAsset = await fetchTasksByAsset(notion, companyNotionId);
+  } catch (e) {
+    console.error(`Tareas no disponibles: ${(e as Error).message}`);
+  }
 
   // Reconciliación completa cada noche → escaneo total de la empresa.
   const filter: any = {
@@ -62,7 +114,8 @@ async function fetchAndUpsert(admin: Admin) {
 
     const visible = res.results
       .map((pg: any) => mapAsset(pg, companyId))
-      .filter((a: any) => VISIBLE.has(a.status));
+      .filter((a: any) => VISIBLE.has(a.status))
+      .map((a: any) => ({ ...a, tasks: tasksByAsset.get(a.notion_id) ?? [] }));
 
     if (visible.length > 0) {
       const { error } = await admin

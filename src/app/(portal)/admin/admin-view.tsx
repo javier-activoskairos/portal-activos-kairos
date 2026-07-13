@@ -20,6 +20,7 @@ export interface RunRow {
 export interface ClientRow {
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   email: string;
 }
 
@@ -391,9 +392,18 @@ export function AdminView({
                       key={c.companyId}
                       className="border-border bg-card flex flex-wrap items-center gap-3.5 rounded-2xl border p-3.5 shadow-[var(--shadow-sm)]"
                     >
-                      <span className="bg-accent text-brand-accent flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold">
-                        {c.companyName.charAt(0).toUpperCase()}
-                      </span>
+                      {c.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.logoUrl}
+                          alt={c.companyName}
+                          className="border-border bg-card size-10 shrink-0 rounded-full border object-contain p-1"
+                        />
+                      ) : (
+                        <span className="bg-accent text-brand-accent flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold">
+                          {c.companyName.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                       <div className="min-w-[150px] flex-1">
                         <div className="text-foreground text-[14.5px] font-semibold">
                           {c.companyName}

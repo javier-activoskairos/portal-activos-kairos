@@ -65,10 +65,12 @@ function LogoutButton({ className }: { className?: string }) {
 export function PortalNav({
   email,
   companyName,
+  logoUrl,
   isAdmin,
 }: {
   email: string;
   companyName: string;
+  logoUrl: string | null;
   isAdmin: boolean;
 }) {
   const pathname = usePathname();
@@ -180,9 +182,18 @@ export function PortalNav({
           <div className="border-border border-t pt-3">
             {/* Empresa — encima del usuario */}
             <div className="mb-2.5 flex items-center gap-2 px-1">
-              <span className="bg-accent text-brand-accent flex size-[26px] shrink-0 items-center justify-center rounded-lg">
-                <IconBuilding width={15} height={15} />
-              </span>
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={companyName}
+                  className="border-border bg-card size-[26px] shrink-0 rounded-lg border object-contain p-0.5"
+                />
+              ) : (
+                <span className="bg-accent text-brand-accent flex size-[26px] shrink-0 items-center justify-center rounded-lg">
+                  <IconBuilding width={15} height={15} />
+                </span>
+              )}
               <span className="text-foreground truncate text-[13px] font-semibold">
                 {companyName}
               </span>

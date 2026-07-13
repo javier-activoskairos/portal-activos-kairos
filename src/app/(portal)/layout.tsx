@@ -18,6 +18,7 @@ export default async function PortalLayout({
       <PortalNav
         email={session.email}
         companyName={session.companyName}
+        logoUrl={session.logoUrl}
         isAdmin={session.role === "admin"}
       />
       <main className="min-[900px]:ml-[244px]">

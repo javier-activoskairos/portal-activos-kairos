@@ -11,6 +11,7 @@ export interface PortalSession {
   userId: string;
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   role: "client" | "admin";
   /** Presente si un admin está previsualizando el portal de otro cliente. */
   viewingAs?: { companyId: string; companyName: string };
@@ -41,7 +42,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
 
   const { data: company } = await supabase
     .from("companies")
-    .select("name")
+    .select("name, logo_url")
     .eq("id", pu.company_id)
     .maybeSingle();
 
@@ -50,6 +51,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
     userId: user.id,
     companyId: pu.company_id,
     companyName: company?.name ?? "Activos Kairos",
+    logoUrl: company?.logo_url ?? null,
     role: pu.role as "client" | "admin",
   };
 
@@ -61,12 +63,13 @@ export async function getPortalSession(): Promise<PortalSession | null> {
       const admin = createAdminClient();
       const { data: tgt } = await admin
         .from("companies")
-        .select("id, name")
+        .select("id, name, logo_url")
         .eq("id", target)
         .maybeSingle();
       if (tgt) {
         session.companyId = tgt.id;
         session.companyName = tgt.name ?? "Cliente";
+        session.logoUrl = tgt.logo_url ?? null;
         session.viewingAs = {
           companyId: tgt.id,
           companyName: tgt.name ?? "Cliente",

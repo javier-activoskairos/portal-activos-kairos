@@ -188,9 +188,18 @@ export default async function InicioPage() {
           Tu empresa
         </p>
         <div className="mt-3 flex items-center gap-3">
-          <span className="bg-accent text-brand-accent flex size-[42px] shrink-0 items-center justify-center rounded-xl">
-            <IconBuilding />
-          </span>
+          {session.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={session.logoUrl}
+              alt={session.companyName}
+              className="border-border bg-card size-[42px] shrink-0 rounded-xl border object-contain p-1"
+            />
+          ) : (
+            <span className="bg-accent text-brand-accent flex size-[42px] shrink-0 items-center justify-center rounded-xl">
+              <IconBuilding />
+            </span>
+          )}
           <div className="min-w-0">
             <div className="text-foreground text-lg font-bold tracking-tight">
               {session?.companyName ?? "Activos Kairos"}

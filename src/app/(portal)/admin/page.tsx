@@ -71,14 +71,23 @@ export default async function AdminPage() {
   }
   const companyIds = [...byCompany.keys()];
   const { data: comps } = companyIds.length
-    ? await admin.from("companies").select("id, name").in("id", companyIds)
-    : { data: [] as { id: string; name: string | null }[] };
-  const nameById = new Map(
-    (comps ?? []).map((c) => [c.id, c.name ?? "Cliente"]),
+    ? await admin
+        .from("companies")
+        .select("id, name, logo_url")
+        .in("id", companyIds)
+    : {
+        data: [] as { id: string; name: string | null; logo_url: string | null }[],
+      };
+  const compById = new Map(
+    (comps ?? []).map((c) => [
+      c.id,
+      { name: c.name ?? "Cliente", logoUrl: c.logo_url ?? null },
+    ]),
   );
   const clients: ClientRow[] = companyIds.map((id) => ({
     companyId: id,
-    companyName: nameById.get(id) ?? "Cliente",
+    companyName: compById.get(id)?.name ?? "Cliente",
+    logoUrl: compById.get(id)?.logoUrl ?? null,
     email: byCompany.get(id) ?? "",
   }));
 

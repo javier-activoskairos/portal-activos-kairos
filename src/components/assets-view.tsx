@@ -135,25 +135,25 @@ function AssetCard({ a, onOpen }: { a: AssetRow; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="flex flex-col rounded-[18px] border p-4 text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="flex flex-col rounded-[20px] border px-[22px] py-5 text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       style={{
         background: `color-mix(in srgb, ${d.tintBase} 6%, var(--card))`,
         borderColor: `color-mix(in srgb, ${d.tintBase} 32%, transparent)`,
       }}
     >
-      <div className="mb-2.5 flex items-start justify-between gap-3">
-        <span className="text-foreground text-[15px] leading-snug font-semibold tracking-tight">
+      <div className="mb-3.5 flex items-start justify-between gap-3">
+        <span className="text-foreground text-base leading-snug font-semibold tracking-tight">
           {a.name}
         </span>
         <StatusBadge label={d.statusLabel} spec={d.badge} />
       </div>
-      <div className="mb-3">
+      <div className="mb-4">
         <StatusBadge
           label={`Prioridad ${priorityLabel(a.priority)}`}
           spec={priorityBadge(a.priority)}
         />
       </div>
-      <div className="mt-1">
+      <div className="mt-auto">
         <div className="mb-[7px] flex items-center justify-between gap-3">
           <span className="text-muted-foreground text-xs">{d.deliver}</span>
           <span
@@ -491,7 +491,7 @@ export function AssetsView({ assets }: { assets: AssetRow[] }) {
             No hay activos en progreso ahora mismo.
           </p>
         ) : (
-          <div className="grid items-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,232px),1fr))]">
+          <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))]">
             {inProgress.map((a) => (
               <AssetCard key={a.id} a={a} onOpen={() => setSelectedId(a.id)} />
             ))}

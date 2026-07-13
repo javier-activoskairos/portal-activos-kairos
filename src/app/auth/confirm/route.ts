@@ -8,14 +8,16 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/inicio";
+  // Tras el proxy de Render, request.url apunta al host interno (localhost).
+  const base = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
 
   if (token_hash && type) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     if (!error) {
-      return NextResponse.redirect(new URL(next, request.url));
+      return NextResponse.redirect(new URL(next, base));
     }
   }
 
-  return NextResponse.redirect(new URL("/acceso-denegado", request.url));
+  return NextResponse.redirect(new URL("/acceso-denegado", base));
 }

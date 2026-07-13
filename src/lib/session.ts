@@ -14,6 +14,8 @@ export interface PortalSession {
   logoUrl: string | null;
   plan: string | null;
   sector: string | null;
+  /** Semanas de racha del plan (Tempo/Stasis) para el bloque del Inicio. */
+  planStreakWeeks: number;
   /** Notion ID del Contacto del usuario (para "Creado por" en incidencias). */
   contactNotionId: string | null;
   /** Rol "Facturación": puede cambiar la configuración de su empresa. */
@@ -48,7 +50,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
 
   const { data: company } = await supabase
     .from("companies")
-    .select("name, logo_url, plan, sector")
+    .select("name, logo_url, plan, sector, plan_streak_weeks")
     .eq("id", pu.company_id)
     .maybeSingle();
 
@@ -60,6 +62,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
     logoUrl: company?.logo_url ?? null,
     plan: company?.plan ?? null,
     sector: company?.sector ?? null,
+    planStreakWeeks: company?.plan_streak_weeks ?? 0,
     contactNotionId: pu.contact_notion_id ?? null,
     canManageCompany: pu.can_manage_company ?? false,
     role: pu.role as "client" | "admin",
@@ -73,7 +76,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
       const admin = createAdminClient();
       const { data: tgt } = await admin
         .from("companies")
-        .select("id, name, logo_url, plan, sector")
+        .select("id, name, logo_url, plan, sector, plan_streak_weeks")
         .eq("id", target)
         .maybeSingle();
       if (tgt) {
@@ -82,6 +85,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
         session.logoUrl = tgt.logo_url ?? null;
         session.plan = tgt.plan ?? null;
         session.sector = tgt.sector ?? null;
+        session.planStreakWeeks = tgt.plan_streak_weeks ?? 0;
         session.viewingAs = {
           companyId: tgt.id,
           companyName: tgt.name ?? "Cliente",

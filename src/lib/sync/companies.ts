@@ -82,12 +82,22 @@ export async function syncCompanies() {
       const esTempo = props?.["Es Tempo?"]?.formula?.boolean === true;
       const tieneMembresia = (props?.["Membresía"]?.relation?.length ?? 0) > 0;
 
-      const patch: Record<string, string | boolean | null> = {
+      // Racha de semanas (Tempo/Stasis): semanas desde el alta de la empresa.
+      const createdMs = Date.parse(page.created_time || "");
+      const streakWeeks = Number.isNaN(createdMs)
+        ? 0
+        : Math.max(
+            0,
+            Math.floor((Date.now() - createdMs) / (7 * 24 * 3600 * 1000)),
+          );
+
+      const patch: Record<string, string | boolean | number | null> = {
         plan: derivePlan(props),
         sector: props?.["Sector"]?.select?.name ?? null,
         estado,
         // Es o ha sido cliente: Estado Cliente, o con membresía, o Es Tempo.
         is_client: estado === "Cliente" || esTempo || tieneMembresia,
+        plan_streak_weeks: streakWeeks,
       };
 
       // Logo (opcional): descargar y re-hospedar si existe.

@@ -31,6 +31,21 @@ const MONTHS_ES = [
   "Dic",
 ];
 
+// Horas estándar por tipo de acompañamiento (reunión).
+const ACOMP_HOURS: Record<string, number> = {
+  Astrapi: 0.75,
+  Areté: 1.5,
+  Prótos: 0.75,
+};
+
+/** Formatea horas con coma decimal, sin ceros sobrantes (1.5 → "1,5"). */
+function fmtHoras(h: number): string {
+  const s = Number.isInteger(h)
+    ? String(h)
+    : h.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+  return s.replace(".", ",");
+}
+
 // Color por tipo de KPI; se atenúa a gris cuando el valor es 0 (condicional).
 const KPI_TONE = {
   blue: { fg: "text-blue-500", border: "border-blue-500/30" },
@@ -99,7 +114,7 @@ export default async function InicioPage() {
   if (!ctx) redirect("/acceso-denegado");
   const { session, db, companyId } = ctx;
 
-  const [assetsRes, incidentsRes] = await Promise.all([
+  const [assetsRes, incidentsRes, meetingsRes] = await Promise.all([
     db
       .from("assets")
       .select("id, name, status, progress, desired_result, due_at, ended_at")
@@ -108,10 +123,18 @@ export default async function InicioPage() {
       .from("incidents")
       .select("status, title, created_at, resolved_at")
       .eq("company_id", companyId),
+    db
+      .from("meetings")
+      .select("type, meeting_date")
+      .eq("company_id", companyId),
   ]);
 
   const assets = (assetsRes.data ?? []) as AssetRow[];
   const incidents = (incidentsRes.data ?? []) as IncidentRow[];
+  const meetings = (meetingsRes.data ?? []) as {
+    type: string;
+    meeting_date: string | null;
+  }[];
 
   const proposed = assets.filter((a) => a.status === "Por Empezar");
   const inProgress = assets.filter((a) => a.status === "En Progreso");
@@ -181,6 +204,35 @@ export default async function InicioPage() {
     Math.max(...incidentsByMonth.map((d) => d.resolved + d.open)),
   );
 
+  // --- Gráfico C: horas de acompañamiento por mes (seguimientos Astrapi/Areté/Prótos) ---
+  const meetingsByMonth = months.map((m) => {
+    const inMonth = meetings.filter(
+      (mt) => monthKey(mt.meeting_date) === m.key,
+    );
+    const astrapi = inMonth.filter((x) => x.type === "Astrapi").length;
+    const arete = inMonth.filter((x) => x.type === "Areté").length;
+    const protos = inMonth.filter((x) => x.type === "Prótos").length;
+    const hA = astrapi * ACOMP_HOURS.Astrapi;
+    const hR = arete * ACOMP_HOURS["Areté"];
+    const hP = protos * ACOMP_HOURS["Prótos"];
+    return { label: m.label, astrapi, arete, protos, hA, hR, hP, total: hA + hR + hP };
+  });
+  const meetingsScale = niceScale(
+    Math.max(...meetingsByMonth.map((d) => d.total)),
+  );
+  const hasProtos = meetingsByMonth.some((d) => d.protos > 0);
+
+  // Racha del plan (Tempo 🔥 / Stasis 🛡️) — bloque en "Tu Plan".
+  const streakKind =
+    session.plan === "Stasis"
+      ? "Stasis"
+      : session.plan === "Tempo"
+        ? "Tempo"
+        : null;
+  const showStreak = session.planStreakWeeks > 0 && !!streakKind;
+  const isStasis = session.plan === "Stasis";
+  const streakGlyph = isStasis ? "🛡️" : "🔥";
+
   return (
     <div className="portal-reveal space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -209,6 +261,30 @@ export default async function InicioPage() {
               Cada mes tu empresa suma más activos y más valor.
             </p>
           </div>
+          {showStreak && (
+            <div
+              className={`flex shrink-0 items-center gap-3.5 self-center rounded-2xl border px-5 py-4 ${
+                isStasis
+                  ? "border-blue-500/25 bg-blue-500/10"
+                  : "bg-accent border-[color:var(--brand-accent)]/25"
+              }`}
+            >
+              <span className="text-2xl leading-none">{streakGlyph}</span>
+              <div className="min-w-0">
+                <div
+                  className={`text-[26px] leading-none font-extrabold tracking-tight tabular-nums ${
+                    isStasis ? "text-blue-500" : "text-brand-accent"
+                  }`}
+                >
+                  {session.planStreakWeeks}
+                </div>
+                <div className="text-muted-foreground mt-1 text-[12.5px] font-semibold">
+                  {session.planStreakWeeks === 1 ? "semana" : "semanas"} de racha{" "}
+                  {streakKind}
+                </div>
+              </div>
+            </div>
+          )}
           <div className="md:border-border shrink-0 md:border-l md:pl-8">
             <p className="text-muted-foreground text-[11px] font-bold tracking-[0.12em] uppercase">
               Empresa
@@ -498,6 +574,144 @@ export default async function InicioPage() {
           </div>
         </section>
       </div>
+
+      {/* Horas de acompañamiento por mes (Astrapi / Areté / Prótos) */}
+      <section className="border-border bg-card relative overflow-hidden rounded-[22px] border p-6 shadow-[var(--shadow-sm)]">
+        <svg
+          aria-hidden
+          viewBox="0 0 1200 380"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[58%] w-full"
+        >
+          <path
+            fill="#F8A848"
+            fillOpacity="0.06"
+            d="M0,150 C200,90 360,210 600,160 C840,110 1000,220 1200,150 L1200,380 L0,380 Z"
+          />
+          <path
+            fill="#F96302"
+            fillOpacity="0.06"
+            d="M0,300 C240,255 400,345 640,305 C880,265 1030,350 1200,300 L1200,380 L0,380 Z"
+          />
+        </svg>
+        <div className="relative z-[1]">
+          <h2 className="text-foreground text-base font-bold tracking-tight">
+            Horas de acompañamiento por mes
+          </h2>
+          <div className="mt-2 mb-4 flex flex-wrap gap-4">
+            <span className="text-muted-foreground flex items-center gap-1.5 text-[12.5px]">
+              <span className="bg-brand size-[9px] rounded-[3px]" />
+              Astrapi
+            </span>
+            <span className="text-muted-foreground flex items-center gap-1.5 text-[12.5px]">
+              <span className="size-[9px] rounded-[3px] bg-blue-500" />
+              Areté
+            </span>
+            {hasProtos && (
+              <span className="text-muted-foreground flex items-center gap-1.5 text-[12.5px]">
+                <span className="size-[9px] rounded-[3px] bg-purple-500" />
+                Prótos
+              </span>
+            )}
+          </div>
+          <div className="flex h-[132px] items-stretch gap-2.5 px-0.5">
+            {/* Eje Y (horas) */}
+            <div className="flex flex-col">
+              <div className="flex flex-1 flex-col items-end justify-between">
+                {meetingsScale.ticks.map((t) => (
+                  <span
+                    key={t}
+                    className="text-muted-foreground font-mono text-[10px] leading-none"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <span className="invisible text-[11.5px] leading-none">0</span>
+            </div>
+            {meetingsByMonth.map((d, i) => (
+              <div
+                key={i}
+                className="group relative flex h-full flex-1 flex-col items-center gap-2"
+              >
+                <div className="flex w-full flex-1 items-end justify-center">
+                  <div
+                    className="flex w-[68%] max-w-[34px] flex-col overflow-hidden rounded-t-md transition-[filter] group-hover:brightness-110"
+                    style={{
+                      height: `${(d.total / meetingsScale.max) * 100}%`,
+                      minHeight: d.total > 0 ? 4 : 0,
+                    }}
+                  >
+                    {d.hR > 0 && (
+                      <div
+                        className="bg-blue-500"
+                        style={{ height: `${(d.hR / d.total) * 100}%` }}
+                      />
+                    )}
+                    {d.hP > 0 && (
+                      <div
+                        className="bg-purple-500"
+                        style={{ height: `${(d.hP / d.total) * 100}%` }}
+                      />
+                    )}
+                    {d.hA > 0 && <div className="bg-brand flex-1" />}
+                  </div>
+                </div>
+                <span className="text-muted-foreground text-[11.5px]">
+                  {d.label}
+                </span>
+                {d.total > 0 && (
+                  <div className="border-border bg-card pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-20 w-max max-w-[240px] -translate-x-1/2 translate-y-1 rounded-2xl border p-3.5 opacity-0 shadow-[var(--shadow-md)] transition-all group-hover:translate-y-0 group-hover:opacity-100">
+                    <div className="mb-2 flex items-baseline justify-between gap-3">
+                      <span className="text-muted-foreground text-[11px] font-bold tracking-[0.06em] uppercase">
+                        {d.label} · acompañamiento
+                      </span>
+                      <span className="text-brand-accent font-mono text-xs font-bold">
+                        {fmtHoras(d.total)} h
+                      </span>
+                    </div>
+                    <ul className="flex flex-col gap-1.5">
+                      {d.astrapi > 0 && (
+                        <li className="flex items-center gap-2">
+                          <span className="bg-brand size-2 shrink-0 rounded-full" />
+                          <span className="text-foreground/90 text-[12.5px]">
+                            Astrapi
+                          </span>
+                          <span className="text-muted-foreground ml-auto font-mono text-[11.5px]">
+                            {d.astrapi} · {fmtHoras(d.hA)} h
+                          </span>
+                        </li>
+                      )}
+                      {d.arete > 0 && (
+                        <li className="flex items-center gap-2">
+                          <span className="size-2 shrink-0 rounded-full bg-blue-500" />
+                          <span className="text-foreground/90 text-[12.5px]">
+                            Areté
+                          </span>
+                          <span className="text-muted-foreground ml-auto font-mono text-[11.5px]">
+                            {d.arete} · {fmtHoras(d.hR)} h
+                          </span>
+                        </li>
+                      )}
+                      {d.protos > 0 && (
+                        <li className="flex items-center gap-2">
+                          <span className="size-2 shrink-0 rounded-full bg-purple-500" />
+                          <span className="text-foreground/90 text-[12.5px]">
+                            Prótos
+                          </span>
+                          <span className="text-muted-foreground ml-auto font-mono text-[11.5px]">
+                            {d.protos} · {fmtHoras(d.hP)} h
+                          </span>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <p className="text-muted-foreground pt-1 text-xs">
         Los datos se sincronizan automáticamente desde Notion: incidencias cada

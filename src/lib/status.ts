@@ -25,9 +25,57 @@ const INCIDENT_BADGE: Record<string, BadgeSpec> = {
 };
 
 const ASSET_BADGE: Record<string, BadgeSpec> = {
+  "Por Empezar": { tone: "warning", dot: true },
   "En Progreso": { tone: "info", dot: true },
   Terminado: { tone: "success", dot: false },
 };
+
+// Etiqueta legible del estado del activo (el diseño llama "Propuesto" al
+// estado interno "Por Empezar").
+const ASSET_STATUS_LABEL: Record<string, string> = {
+  "Por Empezar": "Propuesto",
+  "En Progreso": "En Progreso",
+  Terminado: "Terminado",
+};
+
+export function assetStatusLabel(status: string): string {
+  return ASSET_STATUS_LABEL[status] ?? status;
+}
+
+// Prioridad del activo (Notion) → clave visual del portal.
+export type PriorityKey = "alta" | "media" | "baja";
+
+export function priorityKey(priority: string | null | undefined): PriorityKey {
+  switch (priority) {
+    case "Importante":
+    case "Alta":
+      return "alta";
+    case "Media":
+      return "media";
+    default:
+      return "baja";
+  }
+}
+
+const PRIORITY_BADGE: Record<PriorityKey, BadgeSpec> = {
+  alta: { tone: "danger", dot: true },
+  media: { tone: "brandSoft", dot: true },
+  baja: { tone: "muted", dot: true },
+};
+
+const PRIORITY_LABEL: Record<PriorityKey, string> = {
+  alta: "Alta",
+  media: "Media",
+  baja: "Baja",
+};
+
+export function priorityBadge(priority: string | null | undefined): BadgeSpec {
+  return PRIORITY_BADGE[priorityKey(priority)];
+}
+
+export function priorityLabel(priority: string | null | undefined): string {
+  return PRIORITY_LABEL[priorityKey(priority)];
+}
 
 // Etiqueta de la incidencia (label) → tono visual.
 const LABEL_BADGE: Record<string, BadgeSpec> = {

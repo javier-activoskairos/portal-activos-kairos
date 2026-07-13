@@ -4,6 +4,12 @@ import { getPortalDb } from "@/lib/session";
 import { IconAlert, IconAssets, IconBuilding } from "@/components/icons";
 import { formatProgress } from "@/lib/status";
 import { nameFromEmail } from "@/lib/utils";
+import { niceScale, fmtHoras } from "@/lib/charts";
+import {
+  LegendBarChart,
+  type ChartMonth,
+  type ChartSeries,
+} from "@/components/legend-bar-chart";
 
 export const metadata = { title: "Inicio · Portal Activos Kairos" };
 export const dynamic = "force-dynamic";
@@ -38,14 +44,6 @@ const ACOMP_HOURS: Record<string, number> = {
   Prótos: 0.75,
 };
 
-/** Formatea horas con coma decimal, sin ceros sobrantes (1.5 → "1,5"). */
-function fmtHoras(h: number): string {
-  const s = Number.isInteger(h)
-    ? String(h)
-    : h.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
-  return s.replace(".", ",");
-}
-
 // Color por tipo de KPI; se atenúa a gris cuando el valor es 0 (condicional).
 const KPI_TONE = {
   blue: { fg: "text-blue-500", border: "border-blue-500/30" },
@@ -70,23 +68,6 @@ interface IncidentRow {
   resolved_at: string | null;
 }
 
-/**
- * Escala "bonita" para el eje Y: elige un paso redondo (1·2·5·10…) de modo
- * que las marcas queden equiespaciadas en valor y coincidan con las barras.
- */
-function niceScale(dataMax: number): { max: number; ticks: number[] } {
-  const m = Math.max(1, dataMax);
-  const rawStep = m / 6;
-  const pow = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const n = rawStep / pow;
-  const unit = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
-  const step = Math.max(1, Math.round(unit * pow));
-  const max = Math.ceil(m / step) * step;
-  const ticks: number[] = [];
-  for (let t = max; t > 0; t -= step) ticks.push(t);
-  ticks.push(0);
-  return { max, ticks };
-}
 
 /** Devuelve las claves (año-mes) de los últimos `n` meses, del más antiguo al actual. */
 function lastMonths(n: number): { key: string; label: string }[] {
@@ -200,27 +181,84 @@ export default async function InicioPage() {
       openItems,
     };
   });
-  const incidentsScale = niceScale(
-    Math.max(...incidentsByMonth.map((d) => d.resolved + d.open)),
-  );
+  // Serie/datos para el gráfico de incidencias (leyenda clicable).
+  const incidentsSeries: ChartSeries[] = [
+    {
+      key: "resueltas",
+      label: "Resueltas",
+      barClass: "bg-success-foreground",
+      dotClass: "bg-success-foreground",
+    },
+    {
+      key: "abiertas",
+      label: "Abiertas",
+      barClass: "bg-warning-foreground",
+      dotClass: "bg-warning-foreground",
+    },
+  ];
+  const incidentsMonths: ChartMonth[] = incidentsByMonth.map((d) => ({
+    label: d.label,
+    data: {
+      resueltas: {
+        value: d.resolved,
+        count: d.resolved,
+        items: d.resolvedItems,
+      },
+      abiertas: { value: d.open, count: d.open, items: d.openItems },
+    },
+  }));
 
-  // --- Gráfico C: horas de acompañamiento por mes (seguimientos Astrapi/Areté/Prótos) ---
+  // --- Gráfico C: horas de acompañamiento por mes (Astrapi/Areté/Prótos) ---
   const meetingsByMonth = months.map((m) => {
-    const inMonth = meetings.filter(
-      (mt) => monthKey(mt.meeting_date) === m.key,
-    );
+    const inMonth = meetings.filter((mt) => monthKey(mt.meeting_date) === m.key);
     const astrapi = inMonth.filter((x) => x.type === "Astrapi").length;
     const arete = inMonth.filter((x) => x.type === "Areté").length;
     const protos = inMonth.filter((x) => x.type === "Prótos").length;
-    const hA = astrapi * ACOMP_HOURS.Astrapi;
-    const hR = arete * ACOMP_HOURS["Areté"];
-    const hP = protos * ACOMP_HOURS["Prótos"];
-    return { label: m.label, astrapi, arete, protos, hA, hR, hP, total: hA + hR + hP };
+    return {
+      label: m.label,
+      astrapi,
+      arete,
+      protos,
+      hA: astrapi * ACOMP_HOURS.Astrapi,
+      hR: arete * ACOMP_HOURS["Areté"],
+      hP: protos * ACOMP_HOURS["Prótos"],
+    };
   });
-  const meetingsScale = niceScale(
-    Math.max(...meetingsByMonth.map((d) => d.total)),
-  );
   const hasProtos = meetingsByMonth.some((d) => d.protos > 0);
+  const meetingsSeries: ChartSeries[] = [
+    { key: "astrapi", label: "Astrapi", barClass: "bg-brand", dotClass: "bg-brand" },
+    { key: "arete", label: "Areté", barClass: "bg-blue-500", dotClass: "bg-blue-500" },
+    ...(hasProtos
+      ? [
+          {
+            key: "protos",
+            label: "Prótos",
+            barClass: "bg-purple-500",
+            dotClass: "bg-purple-500",
+          },
+        ]
+      : []),
+  ];
+  const meetingsMonths: ChartMonth[] = meetingsByMonth.map((d) => ({
+    label: d.label,
+    data: {
+      astrapi: {
+        value: d.hA,
+        count: d.astrapi,
+        valueLabel: `${d.astrapi} · ${fmtHoras(d.hA)} h`,
+      },
+      arete: {
+        value: d.hR,
+        count: d.arete,
+        valueLabel: `${d.arete} · ${fmtHoras(d.hR)} h`,
+      },
+      protos: {
+        value: d.hP,
+        count: d.protos,
+        valueLabel: `${d.protos} · ${fmtHoras(d.hP)} h`,
+      },
+    },
+  }));
 
   // Racha del plan (Tempo 🔥 / Stasis 🛡️) — bloque en "Tu Plan".
   const streakKind =
@@ -452,266 +490,22 @@ export default async function InicioPage() {
           </div>
         </section>
 
-        <section className="border-border bg-card rounded-[22px] border p-6 shadow-[var(--shadow-sm)]">
-          <h2 className="text-foreground text-base font-bold tracking-tight">
-            Incidencias mensuales por estado
-          </h2>
-          <div className="mt-2 mb-4 flex gap-4">
-            <span className="text-muted-foreground flex items-center gap-1.5 text-[12.5px]">
-              <span className="bg-success-foreground size-[9px] rounded-[3px]" />
-              Resueltas
-            </span>
-            <span className="text-muted-foreground flex items-center gap-1.5 text-[12.5px]">
-              <span className="bg-warning-foreground size-[9px] rounded-[3px]" />
-              Abiertas
-            </span>
-          </div>
-          <div className="flex h-[132px] items-stretch gap-2.5 px-0.5">
-            {/* Eje Y (índices) */}
-            <div className="flex flex-col">
-              <div className="flex flex-1 flex-col items-end justify-between">
-                {incidentsScale.ticks.map((t) => (
-                  <span
-                    key={t}
-                    className="text-muted-foreground font-mono text-[10px] leading-none"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <span className="invisible text-[11.5px] leading-none">0</span>
-            </div>
-            {incidentsByMonth.map((d, i) => {
-              const total = d.resolved + d.open;
-              return (
-                <div
-                  key={i}
-                  className="group relative flex h-full flex-1 flex-col items-center gap-2"
-                >
-                  <div className="flex w-full flex-1 items-end justify-center">
-                    <div
-                      className="flex w-[68%] max-w-[34px] flex-col overflow-hidden rounded-t-md transition-[filter] group-hover:brightness-110"
-                      style={{
-                        height: `${(total / incidentsScale.max) * 100}%`,
-                        minHeight: total > 0 ? 4 : 0,
-                      }}
-                    >
-                      {d.open > 0 && (
-                        <div
-                          className="bg-warning-foreground"
-                          style={{ height: `${(d.open / total) * 100}%` }}
-                        />
-                      )}
-                      <div className="bg-success-foreground flex-1" />
-                    </div>
-                  </div>
-                  <span className="text-muted-foreground text-[11.5px]">
-                    {d.label}
-                  </span>
-                  {total > 0 && (
-                    <div className="border-border bg-card pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-20 w-max max-w-[240px] -translate-x-1/2 translate-y-1 rounded-2xl border p-3.5 opacity-0 shadow-[var(--shadow-md)] transition-all group-hover:translate-y-0 group-hover:opacity-100">
-                      <div className="mb-2 flex items-baseline justify-between gap-3">
-                        <span className="text-muted-foreground text-[11px] font-bold tracking-[0.06em] uppercase">
-                          {d.label} · incidencias
-                        </span>
-                        <span className="text-brand-accent font-mono text-xs font-bold">
-                          {total}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-2.5">
-                        {d.open > 0 && (
-                          <div>
-                            <div className="mb-1 flex items-center gap-2">
-                              <span className="bg-warning-foreground size-2 shrink-0 rounded-full" />
-                              <span className="text-foreground text-[11.5px] font-bold">
-                                Abiertas
-                              </span>
-                              <span className="text-muted-foreground ml-auto font-mono text-[11px] font-semibold">
-                                {d.open}
-                              </span>
-                            </div>
-                            <ul className="flex flex-col gap-0.5 pl-4">
-                              {d.openItems.map((t, j) => (
-                                <li
-                                  key={j}
-                                  className="text-foreground/90 text-[12px]"
-                                >
-                                  {t}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {d.resolved > 0 && (
-                          <div>
-                            <div className="mb-1 flex items-center gap-2">
-                              <span className="bg-success-foreground size-2 shrink-0 rounded-full" />
-                              <span className="text-foreground text-[11.5px] font-bold">
-                                Resueltas
-                              </span>
-                              <span className="text-muted-foreground ml-auto font-mono text-[11px] font-semibold">
-                                {d.resolved}
-                              </span>
-                            </div>
-                            <ul className="flex flex-col gap-0.5 pl-4">
-                              {d.resolvedItems.map((t, j) => (
-                                <li
-                                  key={j}
-                                  className="text-foreground/90 text-[12px]"
-                                >
-                                  {t}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <LegendBarChart
+          title="Incidencias mensuales por estado"
+          series={incidentsSeries}
+          months={incidentsMonths}
+          popoverSuffix="incidencias"
+        />
       </div>
 
-      {/* Horas de acompañamiento por mes (Astrapi / Areté / Prótos) */}
-      <section className="border-border bg-card relative overflow-hidden rounded-[22px] border p-6 shadow-[var(--shadow-sm)]">
-        <svg
-          aria-hidden
-          viewBox="0 0 1200 380"
-          preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[58%] w-full"
-        >
-          <path
-            fill="#F8A848"
-            fillOpacity="0.06"
-            d="M0,150 C200,90 360,210 600,160 C840,110 1000,220 1200,150 L1200,380 L0,380 Z"
-          />
-          <path
-            fill="#F96302"
-            fillOpacity="0.06"
-            d="M0,300 C240,255 400,345 640,305 C880,265 1030,350 1200,300 L1200,380 L0,380 Z"
-          />
-        </svg>
-        <div className="relative z-[1]">
-          <h2 className="text-foreground text-base font-bold tracking-tight">
-            Horas de acompañamiento por mes
-          </h2>
-          <div className="mt-2 mb-4 flex flex-wrap gap-4">
-            <span className="text-muted-foreground flex items-center gap-1.5 text-[12.5px]">
-              <span className="bg-brand size-[9px] rounded-[3px]" />
-              Astrapi
-            </span>
-            <span className="text-muted-foreground flex items-center gap-1.5 text-[12.5px]">
-              <span className="size-[9px] rounded-[3px] bg-blue-500" />
-              Areté
-            </span>
-            {hasProtos && (
-              <span className="text-muted-foreground flex items-center gap-1.5 text-[12.5px]">
-                <span className="size-[9px] rounded-[3px] bg-purple-500" />
-                Prótos
-              </span>
-            )}
-          </div>
-          <div className="flex h-[132px] items-stretch gap-2.5 px-0.5">
-            {/* Eje Y (horas) */}
-            <div className="flex flex-col">
-              <div className="flex flex-1 flex-col items-end justify-between">
-                {meetingsScale.ticks.map((t) => (
-                  <span
-                    key={t}
-                    className="text-muted-foreground font-mono text-[10px] leading-none"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <span className="invisible text-[11.5px] leading-none">0</span>
-            </div>
-            {meetingsByMonth.map((d, i) => (
-              <div
-                key={i}
-                className="group relative flex h-full flex-1 flex-col items-center gap-2"
-              >
-                <div className="flex w-full flex-1 items-end justify-center">
-                  <div
-                    className="flex w-[68%] max-w-[34px] flex-col overflow-hidden rounded-t-md transition-[filter] group-hover:brightness-110"
-                    style={{
-                      height: `${(d.total / meetingsScale.max) * 100}%`,
-                      minHeight: d.total > 0 ? 4 : 0,
-                    }}
-                  >
-                    {d.hR > 0 && (
-                      <div
-                        className="bg-blue-500"
-                        style={{ height: `${(d.hR / d.total) * 100}%` }}
-                      />
-                    )}
-                    {d.hP > 0 && (
-                      <div
-                        className="bg-purple-500"
-                        style={{ height: `${(d.hP / d.total) * 100}%` }}
-                      />
-                    )}
-                    {d.hA > 0 && <div className="bg-brand flex-1" />}
-                  </div>
-                </div>
-                <span className="text-muted-foreground text-[11.5px]">
-                  {d.label}
-                </span>
-                {d.total > 0 && (
-                  <div className="border-border bg-card pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-20 w-max max-w-[240px] -translate-x-1/2 translate-y-1 rounded-2xl border p-3.5 opacity-0 shadow-[var(--shadow-md)] transition-all group-hover:translate-y-0 group-hover:opacity-100">
-                    <div className="mb-2 flex items-baseline justify-between gap-3">
-                      <span className="text-muted-foreground text-[11px] font-bold tracking-[0.06em] uppercase">
-                        {d.label} · acompañamiento
-                      </span>
-                      <span className="text-brand-accent font-mono text-xs font-bold">
-                        {fmtHoras(d.total)} h
-                      </span>
-                    </div>
-                    <ul className="flex flex-col gap-1.5">
-                      {d.astrapi > 0 && (
-                        <li className="flex items-center gap-2">
-                          <span className="bg-brand size-2 shrink-0 rounded-full" />
-                          <span className="text-foreground/90 text-[12.5px]">
-                            Astrapi
-                          </span>
-                          <span className="text-muted-foreground ml-auto font-mono text-[11.5px]">
-                            {d.astrapi} · {fmtHoras(d.hA)} h
-                          </span>
-                        </li>
-                      )}
-                      {d.arete > 0 && (
-                        <li className="flex items-center gap-2">
-                          <span className="size-2 shrink-0 rounded-full bg-blue-500" />
-                          <span className="text-foreground/90 text-[12.5px]">
-                            Areté
-                          </span>
-                          <span className="text-muted-foreground ml-auto font-mono text-[11.5px]">
-                            {d.arete} · {fmtHoras(d.hR)} h
-                          </span>
-                        </li>
-                      )}
-                      {d.protos > 0 && (
-                        <li className="flex items-center gap-2">
-                          <span className="size-2 shrink-0 rounded-full bg-purple-500" />
-                          <span className="text-foreground/90 text-[12.5px]">
-                            Prótos
-                          </span>
-                          <span className="text-muted-foreground ml-auto font-mono text-[11.5px]">
-                            {d.protos} · {fmtHoras(d.hP)} h
-                          </span>
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <LegendBarChart
+        title="Horas de acompañamiento por mes"
+        series={meetingsSeries}
+        months={meetingsMonths}
+        unit="h"
+        popoverSuffix="acompañamiento"
+        wave
+      />
 
       <p className="text-muted-foreground pt-1 text-xs">
         Los datos se sincronizan automáticamente desde Notion: incidencias cada

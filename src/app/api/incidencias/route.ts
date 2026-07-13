@@ -124,6 +124,7 @@ export async function POST(request: Request) {
         correo: session.email,
         tipo: "incidencia",
         empresaNotionId: company?.notion_id ?? null,
+        contactoNotionId: session.contactNotionId,
         imagenUrl,
         imagenNombre,
       }),

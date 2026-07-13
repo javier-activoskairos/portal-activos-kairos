@@ -3,6 +3,47 @@ import { notionClient } from "@/lib/notion";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "company-logos";
+const CONTACTOS_DB = "912d0b8e-1c39-4071-8d15-dcb40a4f394b";
+
+/**
+ * Resuelve y guarda el Notion ID del Contacto de cada usuario del portal
+ * (match por email en [AK] - Contactos). Se usa para "Creado por" en las
+ * incidencias. Solo rellena los que aún no lo tienen.
+ */
+export async function syncPortalUserContacts() {
+  const admin = createAdminClient();
+  const notion = notionClient();
+
+  const { data: users, error } = await admin
+    .from("portal_users")
+    .select("id, email")
+    .eq("active", true)
+    .is("contact_notion_id", null);
+  if (error) throw error;
+
+  let matched = 0;
+  for (const u of users ?? []) {
+    if (!u.email) continue;
+    try {
+      const res: any = await notion.databases.query({
+        database_id: CONTACTOS_DB,
+        filter: { property: "Email", email: { equals: u.email } },
+        page_size: 1,
+      });
+      const contactId = res.results?.[0]?.id;
+      if (!contactId) continue;
+      const upd = await admin
+        .from("portal_users")
+        .update({ contact_notion_id: contactId })
+        .eq("id", u.id);
+      if (upd.error) throw upd.error;
+      matched++;
+    } catch (e) {
+      console.error(`[sync:contacts] ${u.email}`, e);
+    }
+  }
+  return { status: "success" as const, total: users?.length ?? 0, matched };
+}
 
 /** Deriva el plan de la empresa: "Membresía Texto" o "Tempo" si Es Tempo?. */
 function derivePlan(props: any): string | null {

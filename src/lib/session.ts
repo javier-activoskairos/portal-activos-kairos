@@ -14,6 +14,8 @@ export interface PortalSession {
   logoUrl: string | null;
   plan: string | null;
   sector: string | null;
+  /** Notion ID del Contacto del usuario (para "Creado por" en incidencias). */
+  contactNotionId: string | null;
   role: "client" | "admin";
   /** Presente si un admin está previsualizando el portal de otro cliente. */
   viewingAs?: { companyId: string; companyName: string };
@@ -36,7 +38,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
 
   const { data: pu } = await supabase
     .from("portal_users")
-    .select("company_id, role")
+    .select("company_id, role, contact_notion_id")
     .eq("auth_user_id", user.id)
     .eq("active", true)
     .maybeSingle();
@@ -56,6 +58,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
     logoUrl: company?.logo_url ?? null,
     plan: company?.plan ?? null,
     sector: company?.sector ?? null,
+    contactNotionId: pu.contact_notion_id ?? null,
     role: pu.role as "client" | "admin",
   };
 

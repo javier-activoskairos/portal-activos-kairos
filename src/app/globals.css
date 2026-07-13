@@ -200,7 +200,7 @@
     background-repeat: no-repeat;
     background-position: bottom;
     background-size: 100% 0%;
-    animation: kp-kfill-anim 0.7s cubic-bezier(0.45, 0, 0.15, 1) forwards;
+    animation: kp-kfill-anim 1.2s cubic-bezier(0.45, 0, 0.15, 1) forwards;
   }
   @keyframes kp-kfill-anim {
     from {

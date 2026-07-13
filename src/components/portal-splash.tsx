@@ -18,13 +18,13 @@ export function PortalSplash() {
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("kp-splash-v2")) {
+    if (sessionStorage.getItem("kp-splash-v3")) {
       const t = setTimeout(() => setVisible(false), 0);
       return () => clearTimeout(t);
     }
-    sessionStorage.setItem("kp-splash-v2", "1");
-    const t1 = setTimeout(() => setFading(true), 1000);
-    const t2 = setTimeout(() => setVisible(false), 1350);
+    sessionStorage.setItem("kp-splash-v3", "1");
+    const t1 = setTimeout(() => setFading(true), 1400);
+    const t2 = setTimeout(() => setVisible(false), 1750);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);

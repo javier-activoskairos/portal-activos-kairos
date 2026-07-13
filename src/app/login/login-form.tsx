@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { IconArrow, IconMail } from "@/components/icons";
+import { BrandMark } from "@/components/brand-mark";
 
 type Step = "email" | "code";
 
@@ -59,6 +60,12 @@ export function LoginForm() {
 
   return (
     <div className="border-border bg-card rounded-[24px] border p-[34px] shadow-[var(--shadow-lg)]">
+      <div className="mb-7 flex items-center gap-3">
+        <BrandMark size={38} priority />
+        <span className="text-foreground text-base font-semibold tracking-tight">
+          Activos Kairos
+        </span>
+      </div>
       <p className="text-brand-accent mb-3 text-[12.5px] font-semibold tracking-[0.14em] uppercase">
         Portal de cliente
       </p>

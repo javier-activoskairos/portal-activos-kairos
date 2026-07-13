@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getPortalSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { IconAlert, IconAssets, IconBuilding } from "@/components/icons";
-import { AgendarButton } from "@/components/agendar-button";
 import { formatProgress } from "@/lib/status";
 import { nameFromEmail } from "@/lib/utils";
 
@@ -152,7 +151,6 @@ export default async function InicioPage() {
         <h1 className="text-foreground text-[25px] font-extrabold tracking-tight">
           Hola, {firstName || "de nuevo"}.
         </h1>
-        <AgendarButton />
       </div>
 
       {/* Cabecera: empresa + rol */}
@@ -181,7 +179,7 @@ export default async function InicioPage() {
             <Link
               key={k.label}
               href={k.href}
-              className={`bg-card rounded-[22px] border p-5 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] ${
+              className={`bg-card rounded-[22px] border p-5 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
                 k.accent ? "border-[var(--brand-accent)]/30" : "border-border"
               }`}
             >
@@ -213,7 +211,7 @@ export default async function InicioPage() {
       {nextAsset && (
         <Link
           href="/activos"
-          className="border-border bg-card block rounded-[22px] border p-6 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+          className="border-border bg-card block rounded-[22px] border p-6 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)]"
           style={{
             borderColor: "color-mix(in oklch, var(--brand), transparent 70%)",
           }}

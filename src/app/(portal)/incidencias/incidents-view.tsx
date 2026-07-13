@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
-import { IconArrowLeft, IconPlus } from "@/components/icons";
-import { IncidentModal } from "@/components/incident-modal";
+import { IconArrowLeft } from "@/components/icons";
 import { Input } from "@/components/ui/input";
 import { formatDate, incidentBadge, labelBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -136,7 +135,6 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("todas");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [incidentOpen, setIncidentOpen] = useState(false);
 
   const selected = useMemo(
     () => incidents.find((i) => i.id === selectedId) ?? null,
@@ -206,14 +204,6 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
               {open.length}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setIncidentOpen(true)}
-            className="border-border bg-card text-foreground hover:bg-secondary inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-[13.5px] font-semibold shadow-[var(--shadow-sm)] transition-colors"
-          >
-            <IconPlus />
-            Añadir incidencia
-          </button>
         </div>
         {open.length === 0 ? (
           <div className="border-border bg-card rounded-[20px] border px-6 py-8 text-center shadow-[var(--shadow-sm)]">
@@ -231,7 +221,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                 key={i.id}
                 type="button"
                 onClick={() => setSelectedId(i.id)}
-                className="border-border bg-card flex flex-col rounded-[20px] border p-[22px] text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+                className="border-border bg-card flex flex-col rounded-[20px] border p-[22px] text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)]"
               >
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <span className="text-foreground text-[15.5px] font-semibold tracking-tight">
@@ -319,11 +309,6 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           </div>
         )}
       </section>
-
-      <IncidentModal
-        open={incidentOpen}
-        onClose={() => setIncidentOpen(false)}
-      />
     </div>
   );
 }

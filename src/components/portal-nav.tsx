@@ -1,18 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   IconAlert,
   IconAssets,
+  IconCalendar,
   IconChat,
   IconHome,
   IconLock,
   IconLogout,
+  IconPlus,
 } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AgendarButton } from "@/components/agendar-button";
+import { MeetingModal } from "@/components/meeting-modal";
+import { IncidentModal } from "@/components/incident-modal";
 import { cn, initialsFromEmail } from "@/lib/utils";
 
 type NavItem = {
@@ -68,6 +72,8 @@ export function PortalNav({
 }) {
   const pathname = usePathname();
   const initials = initialsFromEmail(email);
+  const [meetingOpen, setMeetingOpen] = useState(false);
+  const [incidentOpen, setIncidentOpen] = useState(false);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
@@ -132,6 +138,22 @@ export function PortalNav({
         </nav>
 
         <div className="mt-auto flex flex-col gap-3">
+          {/* CTAs del portal — en el menú lateral (como el diseño) */}
+          <button
+            type="button"
+            onClick={() => setMeetingOpen(true)}
+            className="bg-brand text-brand-foreground flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13.5px] font-semibold shadow-[var(--shadow-md)] transition-opacity hover:opacity-90"
+          >
+            <IconCalendar width={17} height={17} /> Agendar reunión
+          </button>
+          <button
+            type="button"
+            onClick={() => setIncidentOpen(true)}
+            className="border-border bg-card text-foreground hover:bg-muted flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-colors"
+          >
+            <IconPlus width={17} height={17} /> Nueva incidencia
+          </button>
+
           {isAdmin && (
             <Link
               href="/admin"
@@ -223,7 +245,24 @@ export function PortalNav({
           )}
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <AgendarButton variant="icon" />
+          <button
+            type="button"
+            onClick={() => setMeetingOpen(true)}
+            title="Agendar reunión"
+            aria-label="Agendar reunión"
+            className="bg-brand text-brand-foreground flex size-[38px] items-center justify-center rounded-[11px] shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90"
+          >
+            <IconCalendar />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIncidentOpen(true)}
+            title="Nueva incidencia"
+            aria-label="Nueva incidencia"
+            className="border-border bg-card text-foreground hover:bg-muted flex size-[38px] items-center justify-center rounded-[11px] border transition-colors"
+          >
+            <IconPlus />
+          </button>
           <ThemeToggle />
           <form action="/auth/signout" method="post">
             <button
@@ -237,6 +276,12 @@ export function PortalNav({
           </form>
         </div>
       </header>
+
+      <MeetingModal open={meetingOpen} onClose={() => setMeetingOpen(false)} />
+      <IncidentModal
+        open={incidentOpen}
+        onClose={() => setIncidentOpen(false)}
+      />
     </>
   );
 }

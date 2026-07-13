@@ -140,7 +140,7 @@ function AssetCard({ a, onOpen }: { a: AssetRow; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="flex flex-col rounded-[20px] border p-[22px] text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="flex flex-col rounded-[20px] border p-[22px] text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       style={{
         background: `color-mix(in srgb, ${d.tintBase} 6%, var(--card))`,
         borderColor: `color-mix(in srgb, ${d.tintBase} 32%, transparent)`,

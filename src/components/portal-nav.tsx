@@ -14,6 +14,7 @@ import {
   IconLock,
   IconLogout,
   IconPlus,
+  IconSettings,
 } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MeetingModal } from "@/components/meeting-modal";
@@ -211,6 +212,19 @@ export function PortalNav({
                   {email}
                 </div>
               </div>
+              <Link
+                href="/configuracion"
+                title="Configuración"
+                aria-label="Configuración"
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+                  isActive("/configuracion")
+                    ? "bg-accent text-brand-accent"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}
+              >
+                <IconSettings width={17} height={17} />
+              </Link>
             </div>
             <LogoutButton />
           </div>

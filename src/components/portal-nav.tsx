@@ -76,14 +76,20 @@ export function PortalNav({
   companyName,
   logoUrl,
   isAdmin,
+  canBilling = false,
   openIncidents = 0,
 }: {
   email: string;
   companyName: string;
   logoUrl: string | null;
   isAdmin: boolean;
+  canBilling?: boolean;
   openIncidents?: number;
 }) {
+  // "Facturación" solo para el rol Facturación.
+  const navItems = NAV_ITEMS.filter(
+    (i) => i.href !== "/facturacion" || canBilling,
+  );
   const pathname = usePathname();
   const initials = initialsFromEmail(email);
   const [meetingOpen, setMeetingOpen] = useState(false);
@@ -175,7 +181,7 @@ export function PortalNav({
         </div>
 
         <nav className="flex flex-col gap-1">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = !item.soon && isActive(item.href);
             const showCount = item.href === "/incidencias" && openIncidents > 0;
@@ -415,7 +421,7 @@ export function PortalNav({
           <BrandMark size={28} radius={8} />
         </Link>
         <nav className="flex flex-1 gap-1 overflow-x-auto">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = !item.soon && isActive(item.href);
             if (item.soon) {

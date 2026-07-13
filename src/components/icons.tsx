@@ -220,6 +220,22 @@ export function IconRefresh({ width = 16, height = 16, ...p }: IconProps) {
   );
 }
 
+export function IconDownload({ width = 15, height = 15, ...p }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      {...base}
+      strokeWidth={1.9}
+      {...p}
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5M12 15V3" />
+    </svg>
+  );
+}
+
 export function IconFile({ width = 16, height = 16, ...p }: IconProps) {
   return (
     <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>

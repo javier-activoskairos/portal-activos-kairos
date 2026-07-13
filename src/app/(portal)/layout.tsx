@@ -38,7 +38,7 @@ export default async function PortalLayout({
         isAdmin={session.role === "admin"}
         openIncidents={openIncidents ?? 0}
       />
-      <main className="min-[900px]:ml-[244px]">
+      <main className="transition-[margin] duration-200 min-[900px]:ml-[var(--kp-sidebar-w,244px)]">
         {session.viewingAs && (
           <div className="bg-brand text-brand-foreground sticky top-0 z-30 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-2 text-center text-[13px] font-medium min-[900px]:top-0">
             <span>

@@ -204,6 +204,56 @@ export function IconBilling({ width = 19, height = 19, ...p }: IconProps) {
   );
 }
 
+export function IconTemple({ width = 18, height = 18, ...p }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>
+      <path d="M3 21h18" />
+      <path d="M12 3 3 8h18L12 3Z" />
+      <path d="M5 10v8M9 10v8M15 10v8M19 10v8" />
+    </svg>
+  );
+}
+
+export function IconHourglass({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>
+      <path d="M6 2h12M6 22h12" />
+      <path d="M8 2c0 4 8 6 8 10s-8 6-8 10" />
+      <path d="M16 2c0 4-8 6-8 10s8 6 8 10" />
+    </svg>
+  );
+}
+
+export function IconExternal({ width = 14, height = 14, ...p }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      {...base}
+      strokeWidth={2}
+      {...p}
+    >
+      <path d="M7 17 17 7M8 7h9v9" />
+    </svg>
+  );
+}
+
+export function IconChevronLeft({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      {...base}
+      strokeWidth={2}
+      {...p}
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
 export function IconSettings({ width = 19, height = 19, ...p }: IconProps) {
   return (
     <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>

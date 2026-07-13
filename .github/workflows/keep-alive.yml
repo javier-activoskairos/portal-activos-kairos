@@ -4,16 +4,22 @@ name: Keep-alive (Render web despierto)
 # haciendo ping cada 10 min al origen. Objetivo: evitar el cold-start / splash
 # "SERVICE WAKING UP" para el visitante.
 #
-# Detección de caídas (para decidir si pasamos a Render Starter):
-#   - Si el ping tarda mucho (> UMBRAL s) => el servicio estaba dormido y ha
-#     arrancado en frío: se registra ::warning:: (el run sale en verde pero con
-#     aviso). Cada warning = una vez que un visitante habría visto el splash.
-#   - Si no responde 2xx/3xx tras los reintentos => ::error:: y el run sale rojo.
-# Revisando el historial de este workflow se ve cuántas veces se ha dormido.
+# Deteccion de caidas:
+#   - Cold start (ping > UMBRAL s): el servicio estaba dormido => ::warning::
+#     (run verde con aviso). Cada warning = una vez que un visitante habria
+#     visto el splash.
+#   - Portal caido (no responde 2xx/3xx tras reintentos): ::error:: (run rojo)
+#     + se crea una Incidencia tipo Error en [AKE] - Incidencias via el webhook
+#     n8n 'incidencia-kairos'.
 on:
   schedule:
     - cron: "2,12,22,32,42,52 * * * *" # cada 10 min, desfasado de los syncs
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: "Forzar fallo para probar el aviso de incidencia"
+        type: boolean
+        default: false
 
 concurrency:
   group: keep-alive
@@ -24,16 +30,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      # Origen directo de Render (evita cualquier caché/edge de Cloudflare y
+      # Origen directo de Render (evita cualquier cache/edge de Cloudflare y
       # garantiza que despierta el contenedor). /login es el healthCheckPath.
       URL: "https://portal-activos-kairos.onrender.com/login"
-      COLD_THRESHOLD: "5" # segundos; por encima se asume arranque en frío
+      COLD_THRESHOLD: "5" # segundos; por encima se asume arranque en frio
     steps:
       - name: Ping
+        id: ping
         run: |
+          if [ "${{ github.event.inputs.force_fail }}" = "true" ]; then
+            echo "::error title=Prueba forzada::force_fail=true, simulando portal caido."
+            exit 1
+          fi
           echo "Ping -> $URL"
           # -sS silencioso pero muestra errores; sigue redirects; hasta 90s por
-          # si arranca en frío; 2 reintentos ante fallos de red/5xx.
+          # si arranca en frio; 2 reintentos ante fallos de red/5xx.
           read -r CODE TIME < <(curl -sS -L -o /dev/null \
             --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors \
             -w '%{http_code} %{time_total}' "$URL") || true
@@ -41,13 +52,39 @@ jobs:
 
           if [ -z "$CODE" ] || [ "$CODE" -lt 200 ] || [ "$CODE" -ge 400 ]; then
             echo "::error title=Portal no responde::HTTP=$CODE tras reintentos (URL $URL)"
+            echo "http=$CODE" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
-          # ¿arranque en frío? (comparación de floats con awk)
           COLD=$(awk -v t="$TIME" -v th="$COLD_THRESHOLD" 'BEGIN{print (t>th)?1:0}')
           if [ "$COLD" = "1" ]; then
             echo "::warning title=Cold start detectado::El servicio estaba dormido (respondio en ${TIME}s, umbral ${COLD_THRESHOLD}s). Un visitante habria visto el splash."
           else
             echo "OK, servicio caliente (${TIME}s)."
+          fi
+
+      - name: Crear incidencia si el portal esta caido
+        if: failure()
+        env:
+          WEBHOOK: "https://n8n.activoskairos.com/webhook/incidencia-kairos"
+          N8N_KEY: ${{ secrets.N8N_INCIDENCIA_APIKEY }}
+          EMPRESA_ID: ${{ secrets.AK_COMPANY_NOTION_ID }}
+          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          HTTP_CODE: ${{ steps.ping.outputs.http }}
+        run: |
+          ERR="El portal no responde desde el keep-alive (HTTP=${HTTP_CODE:-sin respuesta}). Verificar Render (posible caida o cold-start prolongado). Run: ${RUN_URL}"
+          # jq compone el JSON de forma segura (escapa comillas/caracteres).
+          BODY=$(jq -n \
+            --arg source "Portal de cliente (portal.activoskairos.com)" \
+            --arg error "$ERR" \
+            --arg executionUrl "$RUN_URL" \
+            --arg empresaNotionId "$EMPRESA_ID" \
+            '{source:$source, error:$error, executionUrl:$executionUrl, empresaNotionId:$empresaNotionId}')
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            -H "ak-n8n-apikey: $N8N_KEY" \
+            -d "$BODY")
+          echo "Webhook incidencia -> HTTP $CODE"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error title=No se pudo crear la incidencia::El webhook n8n devolvio HTTP $CODE"
           fi

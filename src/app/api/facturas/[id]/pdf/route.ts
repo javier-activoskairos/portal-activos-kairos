@@ -42,13 +42,35 @@ export async function GET(
     .replace(/[^\w.-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  // Si la factura tiene un PDF real re-hospedado en Supabase, se redirige a él
-  // con ?download=<nombre> — Supabase fuerza la descarga con el nombre correcto
-  // (evita "pdf.txt"/"factura.pdf" y no depende de streaming del servidor).
+  // Si la factura tiene un PDF real re-hospedado en Supabase, lo servimos desde
+  // NUESTRO origen (mismo dominio): así no hay redirect ni petición cross-origin
+  // que navegadores como Brave bloquean. Fetch server-to-server con User-Agent
+  // de navegador para no toparse con el bot-check de Cloudflare.
   if (invoice.pdf_url) {
-    const u = new URL(invoice.pdf_url);
-    u.searchParams.set("download", `${safeName}.pdf`);
-    return NextResponse.redirect(u.toString());
+    try {
+      const upstream = await fetch(invoice.pdf_url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+          Accept: "application/pdf,*/*",
+        },
+        cache: "no-store",
+      });
+      if (!upstream.ok) throw new Error(`upstream ${upstream.status}`);
+      const buf = Buffer.from(await upstream.arrayBuffer());
+      return new NextResponse(new Uint8Array(buf), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${safeName}.pdf"`,
+          "Content-Length": String(buf.length),
+          "Cache-Control": "no-store",
+        },
+      });
+    } catch {
+      const u = new URL(invoice.pdf_url);
+      u.searchParams.set("download", `${safeName}.pdf`);
+      return NextResponse.redirect(u.toString());
+    }
   }
 
   const pdf = buildInvoicePdf({

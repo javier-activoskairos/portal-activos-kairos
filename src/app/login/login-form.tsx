@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { IconArrow, IconMail } from "@/components/icons";
+import { IconArrow, IconMail, IconLock } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
 
 type Step = "email" | "code";
@@ -168,6 +168,24 @@ export function LoginForm() {
           </button>
         </form>
       )}
+
+      <div className="border-border/70 mt-6 border-t pt-4">
+        <div className="text-muted-foreground flex items-start gap-2 text-[11.5px] leading-relaxed">
+          <IconLock
+            width={14}
+            height={14}
+            className="text-brand-accent mt-px shrink-0"
+          />
+          <span>
+            <span className="text-foreground font-semibold">
+              Tus datos están protegidos.
+            </span>{" "}
+            Conexión cifrada (TLS), base de datos con cifrado AES-256 y
+            aislamiento por empresa (RLS): cada cliente solo ve lo suyo. Acceso
+            por código, sin contraseñas. Infraestructura SOC 2 Tipo II.
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

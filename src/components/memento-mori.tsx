@@ -349,7 +349,7 @@ export function MementoMoriCalculator() {
               <span className="pulse" /> Memento mori empresarial
             </div>
             <h1 className="title">
-              ¿Cuánto tiempo está <em>muriendo</em> tu empresa cada semana?
+              ¿Cuánto tiempo está <em>perdiendo</em> tu empresa cada semana?
             </h1>
             <p className="lede">
               Calcula el coste invisible de buscar información, repetir procesos y

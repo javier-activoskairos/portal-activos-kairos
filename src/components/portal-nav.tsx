@@ -187,11 +187,11 @@ export function PortalNav({
             const showCount = item.href === "/incidencias" && openIncidents > 0;
             if (item.soon) {
               return (
-                <span
+                <Link
                   key={item.href}
-                  aria-disabled
+                  href={item.href}
                   title={collapsed ? `${item.label} · Pronto` : undefined}
-                  className={cn(rowCls(false, true), "cursor-not-allowed")}
+                  className={rowCls(isActive(item.href))}
                 >
                   <Icon />
                   {!collapsed && (
@@ -200,7 +200,7 @@ export function PortalNav({
                       <SoonTag className="ml-auto" />
                     </>
                   )}
-                </span>
+                </Link>
               );
             }
             return (
@@ -426,13 +426,18 @@ export function PortalNav({
             const active = !item.soon && isActive(item.href);
             if (item.soon) {
               return (
-                <span
+                <Link
                   key={item.href}
-                  aria-disabled
-                  className="text-muted-foreground/60 flex shrink-0 cursor-not-allowed items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-medium"
+                  href={item.href}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] whitespace-nowrap transition-colors",
+                    isActive(item.href)
+                      ? "bg-accent text-brand-accent font-semibold"
+                      : "text-muted-foreground hover:text-foreground font-medium",
+                  )}
                 >
                   <Icon width={16} height={16} /> {item.label}
-                </span>
+                </Link>
               );
             }
             return (

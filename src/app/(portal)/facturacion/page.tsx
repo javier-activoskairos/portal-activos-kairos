@@ -239,11 +239,6 @@ export default async function FacturacionPage() {
           </table>
         </div>
       )}
-
-      <p className="text-muted-foreground pt-1 text-[13px]">
-        ¿Necesitas una factura anterior o cambiar tus datos fiscales? Escríbenos
-        y lo resolvemos el mismo día.
-      </p>
     </div>
   );
 }

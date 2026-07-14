@@ -1,9 +1,96 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { notionClient } from "@/lib/notion";
+import {
+  notionClient,
+  statusName,
+  dateStart,
+  formulaValue,
+  firstRelationId,
+  normalizeId,
+} from "@/lib/notion";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "company-logos";
 const CONTACTOS_DB = "912d0b8e-1c39-4071-8d15-dcb40a4f394b";
+const MEMBRESIAS_DB = "17d0114d-3502-81c6-94c5-fdb637377932";
+
+// Recurrencia de la membresía → frase para la tarjeta de facturación.
+const CYCLE_PHRASE: Record<string, string> = {
+  Mensual: "al mes",
+  Trimestral: "al trimestre",
+  Semestral: "al semestre",
+  Anual: "al año",
+};
+
+/**
+ * Sincroniza el coste y la recurrencia de la suscripción desde [AKF] - Membresías
+ * hacia company_billing (para la tarjeta "Tu suscripción actual"). Solo toca
+ * amount / cycle / next_charge_at (no el método de pago). Membresías activas.
+ */
+export async function syncMemberships() {
+  const admin = createAdminClient();
+  const notion = notionClient();
+
+  const memberships: any[] = [];
+  let cursor: string | undefined;
+  do {
+    const res: any = await notion.databases.query({
+      database_id: MEMBRESIAS_DB,
+      filter: { property: "Estado", status: { equals: "Activa" } },
+      start_cursor: cursor,
+      page_size: 100,
+    });
+    memberships.push(...res.results);
+    cursor = res.has_more ? res.next_cursor : undefined;
+  } while (cursor);
+
+  const nfmt = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 });
+  // Mapa notionEmpresaId → datos de facturación.
+  const byEmpresa = new Map<
+    string,
+    { amount: string | null; cycle: string | null; next: string | null }
+  >();
+  for (const m of memberships) {
+    const p = m.properties ?? {};
+    const empresaId = normalizeId(firstRelationId(p["Empresa"]));
+    if (!empresaId) continue;
+    const precio = p["Precio"]?.number ?? null;
+    const symbol = formulaValue(p["SYMB"]) || "€";
+    const recurrencia = statusName(p["Recurrencia"]);
+    byEmpresa.set(empresaId, {
+      amount: precio != null ? `${nfmt.format(precio)} ${symbol}` : null,
+      cycle: recurrencia ? (CYCLE_PHRASE[recurrencia] ?? null) : null,
+      next: dateStart(p["Siguiente Pago"]),
+    });
+  }
+
+  const { data: companies, error } = await admin
+    .from("companies")
+    .select("id, notion_id")
+    .eq("active", true);
+  if (error) throw error;
+
+  let updated = 0;
+  for (const c of companies ?? []) {
+    const b = c.notion_id ? byEmpresa.get(normalizeId(c.notion_id)!) : undefined;
+    if (!b || (!b.amount && !b.cycle && !b.next)) continue;
+    const up = await admin.from("company_billing").upsert(
+      {
+        company_id: c.id,
+        amount: b.amount,
+        cycle: b.cycle,
+        next_charge_at: b.next,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "company_id" },
+    );
+    if (up.error) {
+      console.error(`[sync:memberships] ${c.id}`, up.error.message);
+      continue;
+    }
+    updated++;
+  }
+  return { status: "success" as const, memberships: memberships.length, updated };
+}
 
 /**
  * Resuelve y guarda el Notion ID del Contacto de cada usuario del portal

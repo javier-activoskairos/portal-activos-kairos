@@ -274,7 +274,11 @@ export default async function InicioPage() {
         : null;
   const showStreak = session.planStreakWeeks > 0 && !!streakKind;
   const isStasis = session.plan === "Stasis";
+  const isTempo = session.plan === "Tempo";
   const streakGlyph = isStasis ? "🛡️" : "🔥";
+  // Reunión de estrategia con Javier (Prótos) para subir de plan.
+  const UPGRADE_MEETING_URL =
+    "https://calendar.notion.so/meet/javierkairos/protos-javier";
 
   return (
     <div className="portal-reveal space-y-4">
@@ -303,6 +307,28 @@ export default async function InicioPage() {
             <p className="text-muted-foreground mt-2 max-w-[42ch] text-[14px] leading-relaxed">
               Cada mes tu empresa suma más activos y más valor.
             </p>
+            {!isTempo && (
+              <a
+                href={UPGRADE_MEETING_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-brand text-brand-foreground mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13.5px] font-semibold shadow-[var(--shadow-md)] transition-transform hover:-translate-y-px"
+              >
+                ✦ Mejorar mi plan a Tempo
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M7 17 17 7M9 7h8v8" />
+                </svg>
+              </a>
+            )}
           </div>
           {showStreak && (
             <div

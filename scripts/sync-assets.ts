@@ -4,7 +4,11 @@
 // Ejecuta: npm run sync:assets
 import { syncAssets } from "@/lib/sync/assets";
 import { syncMeetings } from "@/lib/sync/meetings";
-import { seedClientCompanies, syncCompanies } from "@/lib/sync/companies";
+import {
+  seedClientCompanies,
+  syncCompanies,
+  syncMemberships,
+} from "@/lib/sync/companies";
 
 async function main() {
   try {
@@ -12,6 +16,8 @@ async function main() {
     console.log("[seed:companies]", JSON.stringify(seed));
     const comp = await syncCompanies();
     console.log("[sync:companies]", JSON.stringify(comp));
+    const mem = await syncMemberships();
+    console.log("[sync:memberships]", JSON.stringify(mem));
   } catch (e) {
     console.error("[seed/companies] error (no bloquea el sync de activos)", e);
   }

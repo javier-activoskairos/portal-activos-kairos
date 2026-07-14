@@ -106,7 +106,7 @@ export default async function FacturacionPage() {
         <div className="relative flex flex-wrap items-center gap-6">
           <div className="min-w-0 flex-1">
             <div className="text-brand-accent text-[11.5px] font-bold tracking-[0.14em] uppercase">
-              Tu suscripción
+              Tu suscripción actual
             </div>
             <div className="mt-2.5 mb-2 flex flex-wrap items-baseline gap-2.5">
               <span className="text-foreground text-[30px] leading-none font-extrabold tracking-tight">

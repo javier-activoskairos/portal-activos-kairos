@@ -31,7 +31,7 @@ export default async function AdminPage() {
     admin.from("incidents").select("id", { count: "exact", head: true }),
     admin
       .from("portal_users")
-      .select("company_id, email")
+      .select("id, company_id, email, first_name, last_name, can_manage_company")
       .eq("role", "client")
       .eq("active", true),
   ]);
@@ -61,15 +61,22 @@ export default async function AdminPage() {
   const totalRecords = (assetsCount ?? 0) + (incidentsCount ?? 0);
   const rowsRead = runs[0]?.rows_read ?? totalRecords;
 
-  // Clientes con membresía = una fila por empresa (con email de contacto).
-  const byCompany = new Map<string, string>();
-  for (const u of (clientUsers ?? []) as {
+  // Clientes con membresía = una fila por empresa, con sus contactos (fase 2).
+  type PU = {
+    id: string;
     company_id: string;
     email: string | null;
-  }[]) {
-    if (!byCompany.has(u.company_id)) byCompany.set(u.company_id, u.email ?? "");
+    first_name: string | null;
+    last_name: string | null;
+    can_manage_company: boolean | null;
+  };
+  const usersByCompany = new Map<string, PU[]>();
+  for (const u of (clientUsers ?? []) as PU[]) {
+    const arr = usersByCompany.get(u.company_id) ?? [];
+    arr.push(u);
+    usersByCompany.set(u.company_id, arr);
   }
-  const companyIds = [...byCompany.keys()];
+  const companyIds = [...usersByCompany.keys()];
   const { data: comps } = companyIds.length
     ? await admin
         .from("companies")
@@ -84,12 +91,29 @@ export default async function AdminPage() {
       { name: c.name ?? "Cliente", logoUrl: c.logo_url ?? null },
     ]),
   );
-  const clients: ClientRow[] = companyIds.map((id) => ({
-    companyId: id,
-    companyName: compById.get(id)?.name ?? "Cliente",
-    logoUrl: compById.get(id)?.logoUrl ?? null,
-    email: byCompany.get(id) ?? "",
-  }));
+  const nameOf = (u: PU) =>
+    [u.first_name, u.last_name].filter(Boolean).join(" ") ||
+    (u.email?.split("@")[0] ?? "Contacto");
+  const clients: ClientRow[] = companyIds
+    .map((id) => {
+      const users = (usersByCompany.get(id) ?? [])
+        .slice()
+        .sort((a, b) => (a.email ?? "").localeCompare(b.email ?? ""))
+        .map((u) => ({
+          id: u.id,
+          email: u.email ?? "",
+          name: nameOf(u),
+          billing: !!u.can_manage_company,
+        }));
+      return {
+        companyId: id,
+        companyName: compById.get(id)?.name ?? "Cliente",
+        logoUrl: compById.get(id)?.logoUrl ?? null,
+        email: users[0]?.email ?? "",
+        users,
+      };
+    })
+    .sort((a, b) => a.companyName.localeCompare(b.companyName));
 
   return (
     <AdminView

@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Activa la vista "Ver como cliente". Solo admins. Valida que la empresa exista
  * antes de fijar la cookie, y redirige al inicio del portal del cliente.
  */
-export async function viewAsClient(companyId: string) {
+export async function viewAsClient(companyId: string, portalUserId?: string) {
   const session = await getPortalSession();
   if (!session || session.role !== "admin") throw new Error("No autorizado");
 
@@ -21,8 +21,20 @@ export async function viewAsClient(companyId: string) {
     .maybeSingle();
   if (!company) throw new Error("Empresa no encontrada");
 
+  // Fase 2: si se elige un contacto concreto, se valida que sea de la empresa.
+  let value = companyId;
+  if (portalUserId) {
+    const { data: pu } = await admin
+      .from("portal_users")
+      .select("id")
+      .eq("id", portalUserId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (pu) value = `${companyId}|${portalUserId}`;
+  }
+
   const cookieStore = await cookies();
-  cookieStore.set(VIEW_AS_COOKIE, companyId, {
+  cookieStore.set(VIEW_AS_COOKIE, value, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",

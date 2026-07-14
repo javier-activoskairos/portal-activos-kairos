@@ -44,9 +44,9 @@ export interface MemberPlanItem {
  * Provisión de miembros del portal desde Notion.
  *
  * Reglas de admisión:
- *  - La empresa es o ha sido cliente (Estado "Cliente", o con "Membresía",
- *    o "Es Tempo?" = true).
- *  - El contacto tiene el rol "Avans" (checkbox) y está "Activo".
+ *  - La empresa tiene membresía activa (Tempo o Stasis): "Membresía" con
+ *    relación, o "Es Tempo?" = true.
+ *  - El contacto está "Activo" y tiene el rol "Avans" O "Facturación".
  *  - El rol "Facturación" (checkbox) concede `can_manage_company`
  *    (podrá cambiar la configuración de su empresa).
  *
@@ -60,10 +60,9 @@ export async function syncPortalMembers({
   const admin = createAdminClient();
   const notion = notionClient();
 
-  // 1) Empresas elegibles (es o ha sido cliente).
+  // 1) Empresas con membresía activa (Tempo o Stasis).
   const companies = await queryAll(notion, EMPRESAS_DB, {
     or: [
-      { property: "Estado", status: { equals: "Cliente" } },
       { property: "Membresía", relation: { is_not_empty: true } },
       { property: "Es Tempo?", formula: { checkbox: { equals: true } } },
     ],
@@ -79,11 +78,16 @@ export async function syncPortalMembers({
     });
   }
 
-  // 2) Contactos con rol "Avans" y estado "Activo".
+  // 2) Contactos "Activo" con rol "Avans" o "Facturación".
   const contacts = await queryAll(notion, CONTACTOS_DB, {
     and: [
-      { property: "Avans", checkbox: { equals: true } },
       { property: "Estado", status: { equals: "Activo" } },
+      {
+        or: [
+          { property: "Avans", checkbox: { equals: true } },
+          { property: "Facturación", checkbox: { equals: true } },
+        ],
+      },
     ],
   });
 

@@ -22,6 +22,7 @@ export interface ClientRow {
   companyName: string;
   logoUrl: string | null;
   email: string;
+  users: { id: string; email: string; name: string; billing: boolean }[];
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -173,6 +174,8 @@ export function AdminView({
   const [tab, setTab] = useState<"estado" | "historial">("estado");
   const [showError, setShowError] = useState(false);
   const [clientsOpen, setClientsOpen] = useState(false);
+  // Selector en 2 fases: primero empresa, luego contacto.
+  const [pickedCompany, setPickedCompany] = useState<ClientRow | null>(null);
   const [pending, startTransition] = useTransition();
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
@@ -369,7 +372,10 @@ export function AdminView({
 
             <button
               type="button"
-              onClick={() => setClientsOpen((v) => !v)}
+              onClick={() => {
+                setClientsOpen((v) => !v);
+                setPickedCompany(null);
+              }}
               className="border-border bg-card text-foreground hover:bg-muted flex w-full items-center gap-2.5 rounded-[14px] border px-4 py-3 text-sm font-semibold shadow-[var(--shadow-sm)] transition-colors"
             >
               <IconUsers />
@@ -381,50 +387,143 @@ export function AdminView({
             </button>
 
             {clientsOpen && (
-              <div className="mt-3 flex flex-col gap-2.5">
+              <div className="mt-3">
+                {/* Pasos */}
+                <div className="text-muted-foreground mb-3 flex items-center gap-2 text-[12px] font-semibold">
+                  <span
+                    className={
+                      !pickedCompany ? "text-brand-accent" : "text-muted-foreground"
+                    }
+                  >
+                    1 · Empresa
+                  </span>
+                  <IconArrowRight />
+                  <span
+                    className={
+                      pickedCompany ? "text-brand-accent" : "text-muted-foreground/50"
+                    }
+                  >
+                    2 · Contacto
+                  </span>
+                </div>
+
                 {clients.length === 0 ? (
                   <p className="border-border bg-card text-muted-foreground rounded-2xl border px-4 py-6 text-center text-sm shadow-[var(--shadow-sm)]">
                     No hay clientes con membresía activa todavía.
                   </p>
+                ) : !pickedCompany ? (
+                  /* FASE 1 — empresa */
+                  <div className="flex flex-col gap-2.5">
+                    {clients.map((c) => (
+                      <button
+                        key={c.companyId}
+                        type="button"
+                        onClick={() => setPickedCompany(c)}
+                        className="border-border bg-card hover:bg-muted flex w-full items-center gap-3.5 rounded-2xl border p-3.5 text-left shadow-[var(--shadow-sm)] transition-colors"
+                      >
+                        {c.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={c.logoUrl}
+                            alt={c.companyName}
+                            className="border-border bg-card size-10 shrink-0 rounded-full border object-contain p-1"
+                          />
+                        ) : (
+                          <span className="bg-accent text-brand-accent flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold">
+                            {c.companyName.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <div className="min-w-[150px] flex-1">
+                          <div className="text-foreground text-[14.5px] font-semibold">
+                            {c.companyName}
+                          </div>
+                          <div className="text-muted-foreground mt-0.5 text-xs">
+                            {c.users.length} contacto
+                            {c.users.length === 1 ? "" : "s"}
+                          </div>
+                        </div>
+                        <IconArrowRight />
+                      </button>
+                    ))}
+                  </div>
                 ) : (
-                  clients.map((c) => (
-                    <div
-                      key={c.companyId}
-                      className="border-border bg-card flex flex-wrap items-center gap-3.5 rounded-2xl border p-3.5 shadow-[var(--shadow-sm)]"
-                    >
-                      {c.logoUrl ? (
+                  /* FASE 2 — contacto */
+                  <div>
+                    <div className="border-border bg-card mb-3 flex items-center gap-3 rounded-2xl border p-3.5 shadow-[var(--shadow-sm)]">
+                      <button
+                        type="button"
+                        onClick={() => setPickedCompany(null)}
+                        className="border-border text-muted-foreground hover:bg-muted hover:text-foreground flex size-9 shrink-0 items-center justify-center rounded-xl border transition-colors"
+                        aria-label="Volver a empresas"
+                      >
+                        <span className="rotate-180">
+                          <IconArrowRight />
+                        </span>
+                      </button>
+                      {pickedCompany.logoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={c.logoUrl}
-                          alt={c.companyName}
-                          className="border-border bg-card size-10 shrink-0 rounded-full border object-contain p-1"
+                          src={pickedCompany.logoUrl}
+                          alt={pickedCompany.companyName}
+                          className="border-border bg-card size-9 shrink-0 rounded-full border object-contain p-1"
                         />
                       ) : (
-                        <span className="bg-accent text-brand-accent flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold">
-                          {c.companyName.charAt(0).toUpperCase()}
+                        <span className="bg-accent text-brand-accent flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold">
+                          {pickedCompany.companyName.charAt(0).toUpperCase()}
                         </span>
                       )}
-                      <div className="min-w-[150px] flex-1">
-                        <div className="text-foreground text-[14.5px] font-semibold">
-                          {c.companyName}
-                        </div>
-                        {c.email && (
-                          <div className="text-muted-foreground mt-0.5 font-mono text-xs">
-                            {c.email}
-                          </div>
-                        )}
+                      <div className="text-foreground text-[14.5px] font-semibold">
+                        {pickedCompany.companyName}
                       </div>
-                      <form action={viewAsClient.bind(null, c.companyId)}>
-                        <button
-                          type="submit"
-                          className="border-border bg-card text-foreground hover:bg-muted inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors"
-                        >
-                          Ver como cliente
-                          <IconArrowRight />
-                        </button>
-                      </form>
                     </div>
-                  ))
+
+                    <div className="flex flex-col gap-2.5">
+                      {pickedCompany.users.length === 0 ? (
+                        <p className="border-border bg-card text-muted-foreground rounded-2xl border px-4 py-6 text-center text-sm shadow-[var(--shadow-sm)]">
+                          Esta empresa no tiene contactos con acceso.
+                        </p>
+                      ) : (
+                        pickedCompany.users.map((u) => (
+                          <div
+                            key={u.id}
+                            className="border-border bg-card flex flex-wrap items-center gap-3.5 rounded-2xl border p-3.5 shadow-[var(--shadow-sm)]"
+                          >
+                            <span className="bg-accent text-brand-accent flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold">
+                              {(u.name.charAt(0) || "?").toUpperCase()}
+                            </span>
+                            <div className="min-w-[150px] flex-1">
+                              <div className="text-foreground flex items-center gap-2 text-[14.5px] font-semibold">
+                                {u.name}
+                                {u.billing && (
+                                  <span className="bg-accent text-brand-accent rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.06em] uppercase">
+                                    Facturación
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-muted-foreground mt-0.5 font-mono text-xs">
+                                {u.email}
+                              </div>
+                            </div>
+                            <form
+                              action={viewAsClient.bind(
+                                null,
+                                pickedCompany.companyId,
+                                u.id,
+                              )}
+                            >
+                              <button
+                                type="submit"
+                                className="border-border bg-card text-foreground hover:bg-muted inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors"
+                              >
+                                Ver como este contacto
+                                <IconArrowRight />
+                              </button>
+                            </form>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             )}

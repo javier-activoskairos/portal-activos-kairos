@@ -85,7 +85,9 @@ export async function getPortalSession(): Promise<PortalSession | null> {
   // Vista "Ver como cliente" — solo admins, empresa destino válida y distinta.
   if (session.role === "admin") {
     const cookieStore = await cookies();
-    const target = cookieStore.get(VIEW_AS_COOKIE)?.value;
+    // Cookie: "companyId" o "companyId|portalUserId" (usuario concreto a impersonar).
+    const raw = cookieStore.get(VIEW_AS_COOKIE)?.value ?? "";
+    const [target, forcedUserId] = raw.split("|");
     if (target && target !== pu.company_id) {
       const admin = createAdminClient();
       const { data: tgt } = await admin
@@ -108,7 +110,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
           .eq("company_id", tgt.id)
           .eq("active", true)
           .neq("role", "admin");
-        const best = (reps ?? []).slice().sort((a, b) => {
+        const bestPick = (reps ?? []).slice().sort((a, b) => {
           const ga = GENERIC_MAILBOX.test(a.email.split("@")[0]) ? 1 : 0;
           const gb = GENERIC_MAILBOX.test(b.email.split("@")[0]) ? 1 : 0;
           if (ga !== gb) return ga - gb;
@@ -117,6 +119,10 @@ export async function getPortalSession(): Promise<PortalSession | null> {
           if (na !== nb) return na - nb;
           return a.email.localeCompare(b.email);
         })[0];
+        // Si se eligió un contacto concreto (fase 2), se usa ese; si no, el mejor.
+        const best =
+          (forcedUserId && (reps ?? []).find((r) => r.id === forcedUserId)) ||
+          bestPick;
         const displayName = best
           ? [best.first_name, best.last_name].filter(Boolean).join(" ") || null
           : null;

@@ -399,26 +399,15 @@ export function ConfigView({
               placeholder="Calle, número, piso"
             />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Localidad">
-              <input
-                className={inputCls}
-                value={c.city}
-                disabled={!companyEditable}
-                onChange={(e) => setCf("city", e.target.value)}
-                placeholder="Madrid"
-              />
-            </Field>
-            <Field label="Provincia / Estado">
-              <input
-                className={inputCls}
-                value={c.region}
-                disabled={!companyEditable}
-                onChange={(e) => setCf("region", e.target.value)}
-                placeholder="Madrid"
-              />
-            </Field>
-          </div>
+          <Field label="Ubicación (Localidad, Provincia / Estado)">
+            <input
+              className={inputCls}
+              value={c.city}
+              disabled={!companyEditable}
+              onChange={(e) => setCf("city", e.target.value)}
+              placeholder="Madrid, Comunidad de Madrid"
+            />
+          </Field>
         </div>
 
         {companyEditable && (

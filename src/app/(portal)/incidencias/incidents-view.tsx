@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/status-badge";
 import {
   IconArrowLeft,
   IconCheck,
+  IconExternal,
   IconFile,
   IconRefresh,
 } from "@/components/icons";
@@ -23,6 +24,7 @@ export interface IncidentRow {
   additional_info: string | null;
   response: string | null;
   error_url: string | null;
+  response_url: string | null;
   created_at: string | null;
   created_by: string | null;
   attachments: { name: string; url: string }[] | null;
@@ -168,6 +170,17 @@ function IncidentDetail({
           <p className="text-foreground/90 text-[14.5px] leading-relaxed">
             {incident.response || "Aún sin respuesta."}
           </p>
+          {incident.response_url && (
+            <a
+              href={incident.response_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border-border bg-card text-foreground hover:bg-muted mt-3 inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[13px] font-semibold transition-colors"
+            >
+              <IconExternal width={15} height={15} />
+              Ver respuesta completa
+            </a>
+          )}
         </div>
         <div className="border-border/60 border-t pt-5">
           <div className="text-muted-foreground mb-2.5 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
@@ -422,6 +435,9 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                       {h}
                     </th>
                   ))}
+                  <th className="text-muted-foreground px-[18px] py-3.5 text-right text-[11px] font-semibold tracking-[0.06em] uppercase">
+                    Respuesta
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -445,6 +461,22 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                     </td>
                     <td className="text-muted-foreground px-[18px] py-4 align-middle text-sm whitespace-nowrap">
                       {formatDate(i.resolved_at)}
+                    </td>
+                    <td className="px-[18px] py-4 text-right align-middle whitespace-nowrap">
+                      {i.response_url ? (
+                        <a
+                          href={i.response_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="border-border bg-card text-foreground hover:bg-muted inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 py-1.5 text-[12.5px] font-medium transition-colors"
+                        >
+                          <IconExternal width={13} height={13} />
+                          Ver
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground/50 text-sm">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

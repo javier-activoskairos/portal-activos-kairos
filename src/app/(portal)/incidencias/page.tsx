@@ -13,7 +13,7 @@ export default async function IncidenciasPage() {
   const { data } = await db
     .from("incidents")
     .select(
-      "id, title, status, label, source, additional_info, response, error_url, created_at, created_by, attachments, resolved_at, sla_deadline",
+      "id, title, status, label, source, additional_info, response, error_url, response_url, created_at, created_by, attachments, resolved_at, sla_deadline",
     )
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });

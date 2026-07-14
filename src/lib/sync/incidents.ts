@@ -38,6 +38,7 @@ function mapIncident(page: any, companyId: string) {
     sla_deadline: formulaValue(p["Fecha Limite SLA"]),
     source_url: urlValue(p["URL Origen"]),
     error_url: urlValue(p["URL Error"]),
+    response_url: urlValue(p["URL Respuesta"]),
     notion_url: page.url,
     last_edited_at: page.last_edited_time,
   };

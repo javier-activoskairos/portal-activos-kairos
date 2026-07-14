@@ -533,11 +533,7 @@ export function AssetsView({ assets }: { assets: AssetRow[] }) {
         </div>
 
         {tableRows.length > 0 ? (
-          <AssetTable
-            rows={tableRows}
-            onOpen={setSelectedId}
-            showPlazo={view === "implementados"}
-          />
+          <AssetTable rows={tableRows} onOpen={setSelectedId} />
         ) : (
           <div className="border-border bg-card rounded-[20px] border px-6 py-10 text-center shadow-[var(--shadow-sm)]">
             <div className="text-foreground text-[15px] font-semibold">

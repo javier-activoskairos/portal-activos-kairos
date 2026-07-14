@@ -15,14 +15,14 @@ export default function LoginPage() {
         className="pointer-events-none absolute inset-0 z-0 h-full w-full"
       >
         <defs>
-          <radialGradient id="kpSun" cx="84%" cy="14%" r="46%">
-            <stop offset="0" stopColor="#F96302" stopOpacity="0.42" />
-            <stop offset="0.5" stopColor="#F8A848" stopOpacity="0.14" />
+          <radialGradient id="kpSun" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stopColor="#F96302" stopOpacity="0.40" />
+            <stop offset="0.55" stopColor="#F8A848" stopOpacity="0.12" />
             <stop offset="1" stopColor="#F8A848" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="kpMoon" cx="16%" cy="14%" r="46%">
-            <stop offset="0" stopColor="#8FB2E8" stopOpacity="0.30" />
-            <stop offset="0.5" stopColor="#6FA8E8" stopOpacity="0.10" />
+          <radialGradient id="kpMoon" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stopColor="#8FB2E8" stopOpacity="0.28" />
+            <stop offset="0.55" stopColor="#6FA8E8" stopOpacity="0.09" />
             <stop offset="1" stopColor="#6FA8E8" stopOpacity="0" />
           </radialGradient>
           <linearGradient id="kpSea" x1="0" y1="0" x2="0" y2="1">
@@ -33,27 +33,27 @@ export default function LoginPage() {
 
         {/* Claro — sol / brújula arriba a la derecha */}
         <g className="kp-login-sun">
-          <circle cx="1010" cy="120" r="360" fill="url(#kpSun)" />
-          <circle cx="1010" cy="120" r="88" fill="#F96302" fillOpacity="0.16" />
+          <circle cx="980" cy="215" r="290" fill="url(#kpSun)" />
+          <circle cx="980" cy="215" r="64" fill="#F96302" fillOpacity="0.16" />
           <circle
-            cx="1010"
-            cy="120"
-            r="88"
+            cx="980"
+            cy="215"
+            r="64"
             fill="none"
             stroke="#F96302"
             strokeOpacity="0.32"
             strokeWidth="1.5"
           />
           <g
-            transform="translate(1010 120)"
+            transform="translate(980 215)"
             stroke="#F96302"
             strokeOpacity="0.34"
             strokeWidth="1.5"
             fill="none"
           >
-            <path d="M0,-150 L0,150 M-150,0 L150,0" />
+            <path d="M0,-112 L0,112 M-112,0 L112,0" />
             <path
-              d="M0,-150 L14,-14 L150,0 L14,14 L0,150 L-14,14 L-150,0 L-14,-14 Z"
+              d="M0,-112 L11,-11 L112,0 L11,11 L0,112 L-11,11 L-112,0 L-11,-11 Z"
               fill="#F8A848"
               fillOpacity="0.10"
             />
@@ -62,20 +62,20 @@ export default function LoginPage() {
 
         {/* Oscuro — luna + estrella arriba a la izquierda */}
         <g className="kp-login-moon">
-          <circle cx="190" cy="120" r="360" fill="url(#kpMoon)" />
-          <circle cx="190" cy="120" r="88" fill="#6FA8E8" fillOpacity="0.14" />
-          <circle cx="216" cy="104" r="82" fill="var(--background)" />
+          <circle cx="220" cy="215" r="290" fill="url(#kpMoon)" />
+          <circle cx="220" cy="215" r="64" fill="#6FA8E8" fillOpacity="0.14" />
+          <circle cx="246" cy="199" r="60" fill="var(--background)" />
           <circle
-            cx="190"
-            cy="120"
-            r="88"
+            cx="220"
+            cy="215"
+            r="64"
             fill="none"
             stroke="#8FB2E8"
             strokeOpacity="0.32"
             strokeWidth="1.5"
           />
           <g
-            transform="translate(720 200) scale(0.28)"
+            transform="translate(700 330) scale(0.26)"
             stroke="#8FB2E8"
             strokeOpacity="0.34"
             strokeWidth="5"

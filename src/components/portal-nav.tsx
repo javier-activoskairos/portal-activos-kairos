@@ -189,7 +189,6 @@ export function PortalNav({
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = !item.soon && isActive(item.href);
-            const showCount = item.href === "/incidencias" && openIncidents > 0;
             if (item.soon) {
               return (
                 <Link
@@ -213,18 +212,10 @@ export function PortalNav({
                 key={item.href}
                 href={item.href}
                 title={collapsed ? item.label : undefined}
-                className={cn(rowCls(active), "relative")}
+                className={rowCls(active)}
               >
                 <Icon />
                 {!collapsed && item.label}
-                {showCount &&
-                  (collapsed ? (
-                    <span className="bg-warning-foreground absolute top-1.5 right-1.5 size-2 rounded-full" />
-                  ) : (
-                    <span className="bg-warning text-warning-foreground ml-auto rounded-full px-2 py-0.5 font-mono text-[11.5px] font-bold">
-                      {openIncidents}
-                    </span>
-                  ))}
               </Link>
             );
           })}

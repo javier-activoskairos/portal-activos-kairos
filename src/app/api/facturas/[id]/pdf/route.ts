@@ -36,27 +36,19 @@ export async function GET(
     return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
   }
 
-  const safeName = (invoice.number || "factura").replace(/[^\w.-]+/g, "-");
+  // El identificador visible de la factura (p. ej. F2026-0030) suele venir en
+  // "concept"; "number" puede estar vacío.
+  const safeName = (invoice.number || invoice.concept || "factura")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
-  // Si la factura tiene un PDF real (Notion re-hospedado), se descarga a través
-  // de nuestro origen para forzar el nombre y el tipo correctos (evita "pdf.txt"
-  // que ocurría al redirigir a Supabase, cross-origin).
+  // Si la factura tiene un PDF real re-hospedado en Supabase, se redirige a él
+  // con ?download=<nombre> — Supabase fuerza la descarga con el nombre correcto
+  // (evita "pdf.txt"/"factura.pdf" y no depende de streaming del servidor).
   if (invoice.pdf_url) {
-    try {
-      const upstream = await fetch(invoice.pdf_url);
-      if (!upstream.ok) throw new Error(`fetch pdf ${upstream.status}`);
-      const buf = Buffer.from(await upstream.arrayBuffer());
-      return new NextResponse(new Uint8Array(buf), {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${safeName}.pdf"`,
-          "Cache-Control": "no-store",
-        },
-      });
-    } catch {
-      // Fallback: si no se puede leer, redirige al PDF hospedado.
-      return NextResponse.redirect(invoice.pdf_url);
-    }
+    const u = new URL(invoice.pdf_url);
+    u.searchParams.set("download", `${safeName}.pdf`);
+    return NextResponse.redirect(u.toString());
   }
 
   const pdf = buildInvoicePdf({

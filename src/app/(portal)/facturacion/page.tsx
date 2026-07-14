@@ -226,7 +226,7 @@ export default async function FacturacionPage() {
                   <td className="px-[18px] py-4 text-right align-middle">
                     <a
                       href={`/api/facturas/${inv.id}/pdf`}
-                      download
+                      download={`${inv.number || "factura"}.pdf`}
                       className="border-border bg-card text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-[10px] border px-3 text-[12.5px] font-medium transition-colors"
                     >
                       <IconDownload />

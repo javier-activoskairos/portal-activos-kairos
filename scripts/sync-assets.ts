@@ -1,9 +1,21 @@
 // Cron Render: reconciliación nocturna de Activos + reuniones de acompañamiento.
+// Multi-empresa: primero siembra las empresas cliente nuevas y refresca su
+// metadata (plan/logo/sector), luego sincroniza activos y reuniones de todas.
 // Ejecuta: npm run sync:assets
 import { syncAssets } from "@/lib/sync/assets";
 import { syncMeetings } from "@/lib/sync/meetings";
+import { seedClientCompanies, syncCompanies } from "@/lib/sync/companies";
 
 async function main() {
+  try {
+    const seed = await seedClientCompanies();
+    console.log("[seed:companies]", JSON.stringify(seed));
+    const comp = await syncCompanies();
+    console.log("[sync:companies]", JSON.stringify(comp));
+  } catch (e) {
+    console.error("[seed/companies] error (no bloquea el sync de activos)", e);
+  }
+
   const result = await syncAssets("cron");
   console.log("[sync:assets]", JSON.stringify(result));
   try {

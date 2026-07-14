@@ -127,3 +127,23 @@ export async function resolveCompanyId(admin: Admin): Promise<string> {
   if (!data) throw new Error(`Empresa no encontrada para notion_id ${notionId}`);
   return data.id;
 }
+
+export interface CompanyRef {
+  id: string;
+  notion_id: string;
+}
+
+/**
+ * Todas las empresas activas de la réplica (multi-empresa). Los syncs iteran
+ * sobre estas para traer los datos de cada cliente desde Notion.
+ */
+export async function getActiveCompanies(admin: Admin): Promise<CompanyRef[]> {
+  const { data, error } = await admin
+    .from("companies")
+    .select("id, notion_id")
+    .eq("active", true);
+  if (error) throw error;
+  return (data ?? []).filter(
+    (c): c is CompanyRef => Boolean(c.notion_id),
+  );
+}

@@ -9,7 +9,7 @@ import {
   dateEnd,
   formulaValue,
 } from "@/lib/notion";
-import { runSync, resolveCompanyId, type SyncMode } from "@/lib/sync/run";
+import { runSync, getActiveCompanies, type SyncMode } from "@/lib/sync/run";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -46,43 +46,45 @@ function mapIncident(page: any, companyId: string) {
 async function fetchAndUpsert(admin: Admin, since: string | null) {
   const notion = notionClient();
   const dbId = process.env.NOTION_INCIDENTS_DB!;
-  const companyNotionId = process.env.AK_COMPANY_NOTION_ID!;
-  const companyId = await resolveCompanyId(admin);
+  const companies = await getActiveCompanies(admin);
 
-  const filter: any = {
-    and: [
-      { property: "Empresa", relation: { contains: companyNotionId } },
-    ],
-  };
-  if (since) {
-    filter.and.push({
-      timestamp: "last_edited_time",
-      last_edited_time: { on_or_after: since },
-    });
-  }
-
-  let cursor: string | undefined = undefined;
   let rowsRead = 0;
   let rowsUpserted = 0;
 
-  do {
-    const res: any = await notion.databases.query({
-      database_id: dbId,
-      filter,
-      start_cursor: cursor,
-      page_size: 100,
-    });
-    rowsRead += res.results.length;
-    const rows = res.results.map((pg: any) => mapIncident(pg, companyId));
-    if (rows.length > 0) {
-      const { error } = await admin
-        .from("incidents")
-        .upsert(rows, { onConflict: "notion_id" });
-      if (error) throw new Error(`Upsert incidents: ${error.message}`);
-      rowsUpserted += rows.length;
+  // Multi-empresa: sincroniza las incidencias de cada empresa activa.
+  for (const company of companies) {
+    const filter: any = {
+      and: [
+        { property: "Empresa", relation: { contains: company.notion_id } },
+      ],
+    };
+    if (since) {
+      filter.and.push({
+        timestamp: "last_edited_time",
+        last_edited_time: { on_or_after: since },
+      });
     }
-    cursor = res.has_more ? res.next_cursor : undefined;
-  } while (cursor);
+
+    let cursor: string | undefined = undefined;
+    do {
+      const res: any = await notion.databases.query({
+        database_id: dbId,
+        filter,
+        start_cursor: cursor,
+        page_size: 100,
+      });
+      rowsRead += res.results.length;
+      const rows = res.results.map((pg: any) => mapIncident(pg, company.id));
+      if (rows.length > 0) {
+        const { error } = await admin
+          .from("incidents")
+          .upsert(rows, { onConflict: "notion_id" });
+        if (error) throw new Error(`Upsert incidents: ${error.message}`);
+        rowsUpserted += rows.length;
+      }
+      cursor = res.has_more ? res.next_cursor : undefined;
+    } while (cursor);
+  }
 
   return { rowsRead, rowsUpserted };
 }

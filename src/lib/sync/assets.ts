@@ -7,7 +7,7 @@ import {
   dateStart,
   formulaValue,
 } from "@/lib/notion";
-import { runSync, resolveCompanyId, type SyncMode } from "@/lib/sync/run";
+import { runSync, getActiveCompanies, type SyncMode } from "@/lib/sync/run";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -86,71 +86,77 @@ async function fetchTasksByAsset(
 async function fetchAndUpsert(admin: Admin) {
   const notion = notionClient();
   const dbId = process.env.NOTION_ASSETS_DB!;
-  const companyNotionId = process.env.AK_COMPANY_NOTION_ID!;
-  const companyId = await resolveCompanyId(admin);
+  const companies = await getActiveCompanies(admin);
 
-  // Tareas por activo (best-effort; si la integración no ve Tareas, quedan []).
-  let tasksByAsset = new Map<string, Task[]>();
-  try {
-    tasksByAsset = await fetchTasksByAsset(notion, companyNotionId);
-  } catch (e) {
-    console.error(`Tareas no disponibles: ${(e as Error).message}`);
-  }
-
-  // Reconciliación completa cada noche → escaneo total de la empresa.
-  const filter: any = {
-    property: "Empresa",
-    relation: { contains: companyNotionId },
-  };
-
-  let cursor: string | undefined = undefined;
   let rowsRead = 0;
   let rowsUpserted = 0;
-  const visibleIds: string[] = [];
 
-  do {
-    const res: any = await notion.databases.query({
-      database_id: dbId,
-      filter,
-      start_cursor: cursor,
-      page_size: 100,
-    });
-    rowsRead += res.results.length;
+  // Multi-empresa: recorre todas las empresas activas de la réplica.
+  for (const company of companies) {
+    const companyId = company.id;
+    const companyNotionId = company.notion_id;
 
-    const visible = res.results
-      .map((pg: any) => mapAsset(pg, companyId))
-      .filter((a: any) => VISIBLE.has(a.status))
-      .map((a: any) => ({ ...a, tasks: tasksByAsset.get(a.notion_id) ?? [] }));
-
-    if (visible.length > 0) {
-      const { error } = await admin
-        .from("assets")
-        .upsert(visible, { onConflict: "notion_id" });
-      if (error) throw new Error(`Upsert assets: ${error.message}`);
-      rowsUpserted += visible.length;
-      visibleIds.push(...visible.map((a: any) => a.notion_id));
+    // Tareas por activo (best-effort; si la integración no ve Tareas, quedan []).
+    let tasksByAsset = new Map<string, Task[]>();
+    try {
+      tasksByAsset = await fetchTasksByAsset(notion, companyNotionId);
+    } catch (e) {
+      console.error(`Tareas no disponibles (${companyNotionId}): ${(e as Error).message}`);
     }
-    cursor = res.has_more ? res.next_cursor : undefined;
-  } while (cursor);
 
-  // Reconciliación: elimina de la réplica los activos de la empresa que ya
-  // no son visibles (cambiaron de estado o se borraron en Notion).
-  const { data: existing, error: selErr } = await admin
-    .from("assets")
-    .select("notion_id")
-    .eq("company_id", companyId);
-  if (selErr) throw new Error(`Select assets: ${selErr.message}`);
+    // Reconciliación completa cada noche → escaneo total de la empresa.
+    const filter: any = {
+      property: "Empresa",
+      relation: { contains: companyNotionId },
+    };
 
-  const stale = (existing ?? [])
-    .map((r: { notion_id: string }) => r.notion_id)
-    .filter((id: string) => !visibleIds.includes(id));
+    let cursor: string | undefined = undefined;
+    const visibleIds: string[] = [];
 
-  if (stale.length > 0) {
-    const { error: delErr } = await admin
+    do {
+      const res: any = await notion.databases.query({
+        database_id: dbId,
+        filter,
+        start_cursor: cursor,
+        page_size: 100,
+      });
+      rowsRead += res.results.length;
+
+      const visible = res.results
+        .map((pg: any) => mapAsset(pg, companyId))
+        .filter((a: any) => VISIBLE.has(a.status))
+        .map((a: any) => ({ ...a, tasks: tasksByAsset.get(a.notion_id) ?? [] }));
+
+      if (visible.length > 0) {
+        const { error } = await admin
+          .from("assets")
+          .upsert(visible, { onConflict: "notion_id" });
+        if (error) throw new Error(`Upsert assets: ${error.message}`);
+        rowsUpserted += visible.length;
+        visibleIds.push(...visible.map((a: any) => a.notion_id));
+      }
+      cursor = res.has_more ? res.next_cursor : undefined;
+    } while (cursor);
+
+    // Reconciliación: elimina de la réplica los activos de la empresa que ya
+    // no son visibles (cambiaron de estado o se borraron en Notion).
+    const { data: existing, error: selErr } = await admin
       .from("assets")
-      .delete()
-      .in("notion_id", stale);
-    if (delErr) throw new Error(`Delete stale assets: ${delErr.message}`);
+      .select("notion_id")
+      .eq("company_id", companyId);
+    if (selErr) throw new Error(`Select assets: ${selErr.message}`);
+
+    const stale = (existing ?? [])
+      .map((r: { notion_id: string }) => r.notion_id)
+      .filter((id: string) => !visibleIds.includes(id));
+
+    if (stale.length > 0) {
+      const { error: delErr } = await admin
+        .from("assets")
+        .delete()
+        .in("notion_id", stale);
+      if (delErr) throw new Error(`Delete stale assets: ${delErr.message}`);
+    }
   }
 
   return { rowsRead, rowsUpserted };

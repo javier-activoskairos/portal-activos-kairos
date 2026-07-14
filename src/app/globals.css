@@ -241,4 +241,14 @@
       transform: rotate(360deg);
     }
   }
+  /* Fondo del login: sol/brújula en claro, luna+estrella en oscuro. */
+  .kp-login-moon {
+    display: none;
+  }
+  .dark .kp-login-sun {
+    display: none;
+  }
+  .dark .kp-login-moon {
+    display: block;
+  }
 }

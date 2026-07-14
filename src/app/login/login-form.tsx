@@ -67,7 +67,7 @@ export function LoginForm() {
         </span>
       </div>
       <p className="text-brand-accent mb-3 text-[12.5px] font-semibold tracking-[0.14em] uppercase">
-        Portal de cliente
+        Bitácora de Rumbo
       </p>
 
       {step === "email" ? (

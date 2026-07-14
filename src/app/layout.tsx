@@ -20,16 +20,13 @@ export default function RootLayout({
             __html: `(function(){try{if(localStorage.getItem('kp-theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
-        <link rel="preconnect" href="https://api.fontshare.com" />
+        {/* Satoshi es self-hosted (@font-face en globals.css). Solo cargamos
+            JetBrains Mono desde Google Fonts. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
           href="https://fonts.gstatic.com"
           crossOrigin=""
-        />
-        <link
-          rel="stylesheet"
-          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap"
         />
         <link
           rel="stylesheet"

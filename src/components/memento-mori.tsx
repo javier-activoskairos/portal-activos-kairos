@@ -86,6 +86,28 @@ const CSS = `
 .mm-root .hcol{ flex:1; background:linear-gradient(180deg,var(--danger),#8E3826); border-radius:4px 4px 0 0; transition:height .5s; min-height:3px; }
 .mm-root .hem-x{ display:flex; gap:6px; margin-top:8px; }
 .mm-root .hem-x span{ flex:1; text-align:center; font-size:10.5px; color:var(--faint); }
+/* semana — leyenda clicable + eje de horas absolutas */
+.mm-root .wl.mm-click{ cursor:pointer; user-select:none; transition:opacity .16s; }
+.mm-root .wl.mm-click:hover{ opacity:.85; }
+.mm-root .wl.off{ opacity:.42; }
+.mm-root .wl.off .sw{ background:transparent!important; box-shadow:inset 0 0 0 2px var(--border-2); }
+.mm-root .wl.off b{ text-decoration:line-through; }
+.mm-root .week-axis{ position:relative; height:22px; margin-top:9px; }
+.mm-root .week-tick{ position:absolute; top:0; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; font-family:var(--mono); font-size:10.5px; color:var(--faint); }
+.mm-root .week-tick i{ width:1px; height:7px; background:var(--border-2); margin-bottom:3px; }
+.mm-root .week-total{ font-family:var(--mono); font-size:12.5px; color:var(--muted); margin-top:12px; }
+.mm-root .week-total b{ color:var(--ink); font-weight:700; }
+/* hemorragia — eje Y con valores + tooltip en hover */
+.mm-root .hem-wrap{ display:flex; gap:12px; }
+.mm-root .hem-yaxis{ display:flex; flex-direction:column; justify-content:space-between; height:170px; font-family:var(--mono); font-size:10px; color:var(--faint); text-align:right; white-space:nowrap; }
+.mm-root .hem-main{ flex:1; min-width:0; }
+.mm-root .hem-plot{ position:relative; height:170px; }
+.mm-root .hem-gridline{ position:absolute; left:0; right:0; height:1px; background:var(--border); }
+.mm-root .hem-plot .hem{ position:relative; z-index:1; height:100%; margin:0; }
+.mm-root .hcol{ position:relative; cursor:default; }
+.mm-root .hcol:hover{ filter:brightness(1.14); }
+.mm-root .hcol .hem-tip{ position:absolute; bottom:100%; left:50%; transform:translateX(-50%); margin-bottom:7px; background:var(--bg-2); border:1px solid var(--border-2); color:var(--ink); font-family:var(--mono); font-size:11px; font-weight:700; padding:4px 8px; border-radius:7px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .14s; box-shadow:0 4px 14px rgba(0,0,0,.4); z-index:3; }
+.mm-root .hcol:hover .hem-tip{ opacity:1; }
 .mm-root .diag{ background:linear-gradient(150deg,var(--card-2),var(--card)); border:1px solid var(--border-2); border-radius:22px; padding:30px 32px; }
 .mm-root .diag p{ font-size:16.5px; line-height:1.65; color:var(--body); margin:0 0 16px; }
 .mm-root .diag p:last-of-type{ margin-bottom:0; }
@@ -130,6 +152,17 @@ const eur = (n: number) =>
   }).format(Math.round(n));
 const num = (n: number, d = 0) =>
   new Intl.NumberFormat("es-ES", { maximumFractionDigits: d }).format(n);
+// Etiqueta compacta para el eje Y (50.000 → "50 k €")
+const eurAxis = (n: number) =>
+  n >= 1000 ? `${num(n / 1000)} k €` : eur(n);
+// Techo "redondo" para el eje (151.200 → 200.000)
+function niceMax(v: number): number {
+  if (v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / p;
+  const m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
+  return m * p;
+}
 
 function compute(v: {
   personas: number;
@@ -175,6 +208,14 @@ export function MementoMoriCalculator() {
   const [busqueda, setBusqueda] = useState(1);
   const [manual, setManual] = useState(1);
   const [profundo, setProfundo] = useState(40);
+  const [hiddenSeg, setHiddenSeg] = useState<Set<string>>(new Set());
+  const toggleSeg = (k: string) =>
+    setHiddenSeg((prev) => {
+      const n = new Set(prev);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
 
   const v = {
     personas: Math.max(1, personas || 1),
@@ -209,11 +250,20 @@ export function MementoMoriCalculator() {
     { k: "Comunicación / coordinación", h: resto * 0.65, c: "var(--info)" },
     { k: "Otros", h: resto * 0.35, c: "var(--faint)" },
   ];
+  // Segmentos visibles (leyenda clicable) → la barra se reescala y no deja hueco.
+  const visibleSegs = segs.filter((s) => !hiddenSeg.has(s.k));
+  const visTotal = visibleSegs.reduce((a, s) => a + s.h, 0) || 1;
+  const weekStep =
+    visTotal > 30 ? 10 : visTotal > 12 ? 5 : visTotal > 4 ? 2 : 1;
+  const weekTicks: number[] = [];
+  for (let t = 0; t <= visTotal + 0.0001; t += weekStep) weekTicks.push(t);
 
   // Hemorragia anual (acumulado)
   let acc = 0;
   const hemVals = MESES.map(() => (acc += r.costeMensual));
   const hemMax = acc || 1;
+  const hemYMax = niceMax(hemMax);
+  const hemTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => hemYMax * f);
 
   // Antes/después
   const baCols = [
@@ -496,21 +546,52 @@ export function MementoMoriCalculator() {
                 Cómo se reparten, de media, las 40 horas semanales por persona.
               </div>
               <div className="week-bar">
-                {segs.map((s, i) => (
+                {visibleSegs.map((s) => (
                   <div
-                    key={i}
+                    key={s.k}
                     className="week-seg"
-                    style={{ width: `${(s.h / SEMANA_H) * 100}%`, background: s.c }}
+                    style={{ width: `${(s.h / visTotal) * 100}%`, background: s.c }}
                   />
                 ))}
               </div>
-              <div className="week-legend">
-                {segs.map((s, i) => (
-                  <span key={i} className="wl">
-                    <span className="sw" style={{ background: s.c }} />
-                    {s.k} <b>{num(s.h, 1)} h</b>
+              <div className="week-axis" aria-hidden>
+                {weekTicks.map((t) => (
+                  <span
+                    key={t}
+                    className="week-tick"
+                    style={{ left: `${(t / visTotal) * 100}%` }}
+                  >
+                    <i />
+                    {num(t)}
                   </span>
                 ))}
+              </div>
+              <div className="week-total">
+                Total visible <b>{num(visTotal, 1)} h</b> de {SEMANA_H} h
+                semanales.
+              </div>
+              <div className="week-legend">
+                {segs.map((s) => {
+                  const off = hiddenSeg.has(s.k);
+                  return (
+                    <span
+                      key={s.k}
+                      className={"wl mm-click" + (off ? " off" : "")}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleSeg(s.k)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleSeg(s.k);
+                        }
+                      }}
+                    >
+                      <span className="sw" style={{ background: s.c }} />
+                      {s.k} <b>{num(s.h, 1)} h</b>
+                    </span>
+                  );
+                })}
               </div>
               <p className="chart-quote">
                 “No todo el tiempo trabajado genera avance. Parte de la semana
@@ -523,15 +604,44 @@ export function MementoMoriCalculator() {
               <div className="chart-note">
                 Coste operativo invisible acumulado mes a mes.
               </div>
-              <div className="hem">
-                {hemVals.map((x, i) => (
-                  <div key={i} className="hcol" style={{ height: `${(x / hemMax) * 100}%` }} />
-                ))}
-              </div>
-              <div className="hem-x">
-                {MESES.map((m) => (
-                  <span key={m}>{m}</span>
-                ))}
+              <div className="hem-wrap">
+                <div className="hem-yaxis">
+                  {hemTicks
+                    .slice()
+                    .reverse()
+                    .map((t) => (
+                      <span key={t}>{eurAxis(t)}</span>
+                    ))}
+                </div>
+                <div className="hem-main">
+                  <div className="hem-plot">
+                    {hemTicks.map((t) => (
+                      <div
+                        key={t}
+                        className="hem-gridline"
+                        style={{ bottom: `${(t / hemYMax) * 100}%` }}
+                      />
+                    ))}
+                    <div className="hem">
+                      {hemVals.map((x, i) => (
+                        <div
+                          key={i}
+                          className="hcol"
+                          style={{ height: `${(x / hemYMax) * 100}%` }}
+                        >
+                          <span className="hem-tip">
+                            {MESES[i]} · {eur(x)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="hem-x">
+                    {MESES.map((m) => (
+                      <span key={m}>{m}</span>
+                    ))}
+                  </div>
+                </div>
               </div>
               <p className="chart-quote">
                 “La pérdida diaria parece pequeña. La pérdida anual cambia la

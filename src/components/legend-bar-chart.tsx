@@ -68,25 +68,27 @@ export function LegendBarChart({
   const fmtTotal = (v: number) => (unit === "h" ? `${fmtHoras(v)} h` : `${v}`);
 
   return (
-    <section className="border-border bg-card relative overflow-hidden rounded-[22px] border p-6 shadow-[var(--shadow-sm)]">
+    <section className="border-border bg-card relative rounded-[22px] border p-6 shadow-[var(--shadow-sm)]">
       {wave && (
-        <svg
-          aria-hidden
-          viewBox="0 0 1200 380"
-          preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[58%] w-full"
-        >
-          <path
-            fill="#F8A848"
-            fillOpacity="0.06"
-            d="M0,150 C200,90 360,210 600,160 C840,110 1000,220 1200,150 L1200,380 L0,380 Z"
-          />
-          <path
-            fill="#F96302"
-            fillOpacity="0.06"
-            d="M0,300 C240,255 400,345 640,305 C880,265 1030,350 1200,300 L1200,380 L0,380 Z"
-          />
-        </svg>
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[22px]">
+          <svg
+            aria-hidden
+            viewBox="0 0 1200 380"
+            preserveAspectRatio="none"
+            className="absolute inset-x-0 bottom-0 h-[58%] w-full"
+          >
+            <path
+              fill="#F8A848"
+              fillOpacity="0.06"
+              d="M0,150 C200,90 360,210 600,160 C840,110 1000,220 1200,150 L1200,380 L0,380 Z"
+            />
+            <path
+              fill="#F96302"
+              fillOpacity="0.06"
+              d="M0,300 C240,255 400,345 640,305 C880,265 1030,350 1200,300 L1200,380 L0,380 Z"
+            />
+          </svg>
+        </div>
       )}
       <div className="relative z-[1]">
         <h2 className="text-foreground text-base font-bold tracking-tight">

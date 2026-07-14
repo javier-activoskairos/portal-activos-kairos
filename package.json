@@ -12,7 +12,8 @@
     "sync:incidents": "tsx scripts/sync-incidents.ts",
     "sync:assets": "tsx scripts/sync-assets.ts",
     "sync:logos": "tsx scripts/sync-company-logos.ts",
-    "sync:members": "tsx scripts/sync-members.ts"
+    "sync:members": "tsx scripts/sync-members.ts",
+    "sync:invoices": "tsx scripts/sync-invoices.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

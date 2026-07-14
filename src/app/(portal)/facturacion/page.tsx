@@ -17,13 +17,36 @@ interface Billing {
 
 interface Invoice {
   id: string;
-  number: string;
+  number: string | null;
   concept: string;
   amount: string;
   currency: string | null;
   status: string;
   issued_at: string | null;
 }
+
+const INVOICE_STATUS: Record<string, { label: string; cls: string; dot: string }> = {
+  pagada: {
+    label: "Pagada",
+    cls: "bg-success text-success-foreground",
+    dot: "bg-success-foreground",
+  },
+  enviada: {
+    label: "Enviada",
+    cls: "bg-[color-mix(in_oklch,var(--info-foreground),transparent_85%)] text-[var(--info-foreground)]",
+    dot: "bg-[var(--info-foreground)]",
+  },
+  pendiente: {
+    label: "Pendiente",
+    cls: "bg-warning text-warning-foreground",
+    dot: "bg-warning-foreground",
+  },
+  rechazada: {
+    label: "Rechazada",
+    cls: "bg-[color-mix(in_oklch,var(--danger-foreground),transparent_85%)] text-danger-foreground",
+    dot: "bg-danger-foreground",
+  },
+};
 
 function fmtDate(d: string | null): string {
   if (!d) return "—";
@@ -170,10 +193,18 @@ export default async function FacturacionPage() {
               {invoices.map((inv) => (
                 <tr key={inv.id} className="border-border/60 border-t">
                   <td className="px-[18px] py-4 align-middle">
-                    <span className="bg-success text-success-foreground inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-medium">
-                      <span className="bg-success-foreground size-[7px] rounded-full" />
-                      Pagada
-                    </span>
+                    {(() => {
+                      const s =
+                        INVOICE_STATUS[inv.status] ?? INVOICE_STATUS.pendiente;
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-medium ${s.cls}`}
+                        >
+                          <span className={`size-[7px] rounded-full ${s.dot}`} />
+                          {s.label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="text-muted-foreground px-[18px] py-4 align-middle text-sm whitespace-nowrap">
                     {fmtDate(inv.issued_at)}
@@ -182,9 +213,11 @@ export default async function FacturacionPage() {
                     <div className="text-foreground text-sm font-semibold">
                       {inv.concept}
                     </div>
-                    <div className="text-muted-foreground mt-0.5 font-mono text-[11.5px]">
-                      {inv.number}
-                    </div>
+                    {inv.number && (
+                      <div className="text-muted-foreground mt-0.5 font-mono text-[11.5px]">
+                        {inv.number}
+                      </div>
+                    )}
                   </td>
                   <td className="text-foreground px-[18px] py-4 align-middle font-mono text-sm font-semibold whitespace-nowrap">
                     {inv.amount}

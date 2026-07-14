@@ -20,6 +20,7 @@ interface Invoice {
   number: string;
   concept: string;
   amount: string;
+  currency: string | null;
   status: string;
   issued_at: string | null;
 }
@@ -47,7 +48,7 @@ export default async function FacturacionPage() {
       .maybeSingle(),
     db
       .from("invoices")
-      .select("id, number, concept, amount, status, issued_at")
+      .select("id, number, concept, amount, currency, status, issued_at")
       .eq("company_id", companyId)
       .order("issued_at", { ascending: false }),
   ]);
@@ -187,6 +188,7 @@ export default async function FacturacionPage() {
                   </td>
                   <td className="text-foreground px-[18px] py-4 align-middle font-mono text-sm font-semibold whitespace-nowrap">
                     {inv.amount}
+                    {inv.currency ? ` ${inv.currency}` : ""}
                   </td>
                   <td className="px-[18px] py-4 text-right align-middle">
                     <a

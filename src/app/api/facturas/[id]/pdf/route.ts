@@ -28,7 +28,7 @@ export async function GET(
 
   const { data: invoice } = await db
     .from("invoices")
-    .select("number, concept, amount, issued_at")
+    .select("number, concept, amount, currency, issued_at, pdf_url")
     .eq("id", id)
     .eq("company_id", companyId)
     .maybeSingle();
@@ -36,10 +36,15 @@ export async function GET(
     return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
   }
 
+  // Si la factura tiene un PDF real (Notion), se sirve ese.
+  if (invoice.pdf_url) {
+    return NextResponse.redirect(invoice.pdf_url);
+  }
+
   const pdf = buildInvoicePdf({
     number: invoice.number,
     concept: invoice.concept,
-    amount: invoice.amount,
+    amountLabel: `${invoice.amount} ${invoice.currency ?? ""}`.trim(),
     dateLabel: fmtDate(invoice.issued_at),
     companyName: session.companyName,
   });

@@ -1,23 +1,52 @@
-import { IconSettings } from "@/components/icons";
+import { redirect } from "next/navigation";
+import { getPortalDb } from "@/lib/session";
+import { ConfigView } from "@/components/config-view";
 
 export const metadata = { title: "Configuración · Portal Activos Kairos" };
+export const dynamic = "force-dynamic";
 
-export default function ConfiguracionPage() {
+export default async function ConfiguracionPage() {
+  const ctx = await getPortalDb();
+  if (!ctx) redirect("/acceso-denegado");
+  const { session, db, companyId } = ctx;
+
+  const [{ data: profile }, { data: company }] = await Promise.all([
+    db
+      .from("portal_users")
+      .select(
+        "first_name, last_name, phone, role_title, personal_email, birthday, avatar_url",
+      )
+      .eq("auth_user_id", session.userId)
+      .maybeSingle(),
+    db
+      .from("companies")
+      .select("fiscal_name, tax_id, address, city, region, postal_code")
+      .eq("id", companyId)
+      .maybeSingle(),
+  ]);
+
   return (
-    <div className="portal-reveal flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
-      <span className="bg-accent text-brand-accent mb-6 flex size-[72px] items-center justify-center rounded-[20px]">
-        <IconSettings width={34} height={34} />
-      </span>
-      <span className="border-border text-muted-foreground mb-4 rounded-full border px-3 py-1 text-[11px] font-bold tracking-[0.1em] uppercase">
-        Pronto
-      </span>
-      <h1 className="text-foreground text-[28px] leading-tight font-extrabold tracking-tight">
-        Configuración
-      </h1>
-      <p className="text-muted-foreground mt-2 max-w-[46ch] text-[15px] leading-relaxed">
-        Aquí podrás gestionar tu perfil, tu empresa y tus notificaciones. Lo
-        estamos preparando.
-      </p>
-    </div>
+    <ConfigView
+      email={session.email}
+      canManageCompany={session.canManageCompany}
+      readOnly={!!session.viewingAs}
+      profile={{
+        firstName: profile?.first_name ?? "",
+        lastName: profile?.last_name ?? "",
+        phone: profile?.phone ?? "",
+        roleTitle: profile?.role_title ?? "",
+        personalEmail: profile?.personal_email ?? "",
+        birthday: profile?.birthday ?? "",
+        avatarUrl: profile?.avatar_url ?? null,
+      }}
+      company={{
+        fiscalName: company?.fiscal_name ?? "",
+        taxId: company?.tax_id ?? "",
+        address: company?.address ?? "",
+        city: company?.city ?? "",
+        region: company?.region ?? "",
+        postalCode: company?.postal_code ?? "",
+      }}
+    />
   );
 }

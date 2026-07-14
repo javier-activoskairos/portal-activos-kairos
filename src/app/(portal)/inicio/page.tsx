@@ -504,7 +504,6 @@ export default async function InicioPage() {
         months={meetingsMonths}
         unit="h"
         popoverSuffix="acompañamiento"
-        wave
       />
 
       <p className="text-muted-foreground pt-1 text-xs">

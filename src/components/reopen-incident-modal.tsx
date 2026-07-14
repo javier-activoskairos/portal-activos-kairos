@@ -18,6 +18,7 @@ export function ReopenIncidentModal({
   onClose: () => void;
 }) {
   const [motivo, setMotivo] = useState("");
+  const [loom, setLoom] = useState("");
   const [imagen, setImagen] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export function ReopenIncidentModal({
     setWasOpen(open);
     if (!open) {
       setMotivo("");
+      setLoom("");
       setImagen(null);
       setLoading(false);
       setError(null);
@@ -61,6 +63,7 @@ export function ReopenIncidentModal({
       const form = new FormData();
       form.append("incidentId", incidentId);
       form.append("motivo", motivo.trim());
+      if (loom.trim()) form.append("loom", loom.trim());
       if (imagen) form.append("imagen", imagen);
       const res = await fetch("/api/incidencias/reabrir", {
         method: "POST",
@@ -154,6 +157,21 @@ export function ReopenIncidentModal({
                   onChange={(e) => setMotivo(e.target.value)}
                   placeholder="¿Qué ha vuelto a pasar? ¿Sigue igual o ha cambiado algo desde que se cerró?"
                   className={`${fieldClass} min-h-24 resize-y`}
+                />
+              </div>
+              <div>
+                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                  Loom o enlace{" "}
+                  <span className="text-muted-foreground font-medium">
+                    (opcional)
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  value={loom}
+                  onChange={(e) => setLoom(e.target.value)}
+                  placeholder="https://www.loom.com/share/…"
+                  className={fieldClass}
                 />
               </div>
               <div>

@@ -47,6 +47,7 @@ const ACOMP_HOURS: Record<string, number> = {
 // Color por tipo de KPI; se atenúa a gris cuando el valor es 0 (condicional).
 const KPI_TONE = {
   blue: { fg: "text-blue-500", border: "border-blue-500/30" },
+  amber: { fg: "text-amber-500", border: "border-amber-500/35" },
   orange: { fg: "text-brand-accent", border: "border-[var(--brand-accent)]/35" },
   red: { fg: "text-red-500", border: "border-red-500/30" },
 } as const;
@@ -136,14 +137,14 @@ export default async function InicioPage() {
       value: proposed.length,
       href: "/activos",
       icon: IconAssets,
-      tone: "blue" as const,
+      tone: "amber" as const,
     },
     {
       label: "Activos en construcción",
       value: inProgress.length,
       href: "/activos",
       icon: IconAssets,
-      tone: "orange" as const,
+      tone: "blue" as const,
     },
     {
       label: "Incidencias abiertas",

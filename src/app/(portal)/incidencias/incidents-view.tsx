@@ -2,9 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
-import { IconArrowLeft, IconFile, IconRefresh } from "@/components/icons";
+import {
+  IconArrowLeft,
+  IconCheck,
+  IconFile,
+  IconRefresh,
+} from "@/components/icons";
 import { Input } from "@/components/ui/input";
 import { ReopenIncidentModal } from "@/components/reopen-incident-modal";
+import { VerifyIncidentModal } from "@/components/verify-incident-modal";
 import { formatDate, incidentBadge, labelBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
@@ -24,23 +30,14 @@ export interface IncidentRow {
   sla_deadline: string | null;
 }
 
-const FILTERS = [
-  { key: "todas", label: "Todas" },
-  { key: "abiertas", label: "Abiertas" },
-  { key: "resueltas", label: "Resueltas" },
-];
+// Grupos por Estado de Notion.
+const OPEN = new Set(["Pendiente", "Solucionando", "En Espera", "Escalada"]);
+const VERIFY = new Set(["Verificación"]);
+const RESOLVED = new Set(["Solucionada", "Solucionada con Acciones Pendientes"]);
 
-const OPEN = new Set([
-  "Pendiente",
-  "Solucionando",
-  "En Espera",
-  "Escalada",
-  "Solucionada con Acciones Pendientes",
-]);
-
-function isOpen(i: IncidentRow) {
-  return OPEN.has(i.status);
-}
+const isOpen = (i: IncidentRow) => OPEN.has(i.status);
+const isVerify = (i: IncidentRow) => VERIFY.has(i.status);
+const isResolved = (i: IncidentRow) => RESOLVED.has(i.status);
 
 function isImageUrl(url: string) {
   return /\.(png|jpe?g|webp|gif|svg|avif)(\?|$)/i.test(url);
@@ -51,18 +48,21 @@ function IncidentDetail({
   incident,
   onBack,
   onReopen,
+  onVerify,
 }: {
   incident: IncidentRow;
   onBack: () => void;
   onReopen: () => void;
+  onVerify: () => void;
 }) {
   const badge = incidentBadge(incident.status);
   const label = labelBadge(incident.label);
   const attachments = incident.attachments ?? [];
-  const resolved = !isOpen(incident);
+  const verify = isVerify(incident);
+  const canReopen = verify || isResolved(incident);
   return (
     <div className="portal-reveal space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
           onClick={onBack}
@@ -71,16 +71,28 @@ function IncidentDetail({
           <IconArrowLeft width={16} height={16} />
           Volver a Incidencias
         </button>
-        {resolved && (
-          <button
-            type="button"
-            onClick={onReopen}
-            className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors"
-          >
-            <IconRefresh width={15} height={15} />
-            Reabrir incidencia
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {verify && (
+            <button
+              type="button"
+              onClick={onVerify}
+              className="bg-brand text-brand-foreground flex items-center gap-2 rounded-xl px-4 py-2 text-[13.5px] font-semibold shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90"
+            >
+              <IconCheck width={15} height={15} />
+              Verificar
+            </button>
+          )}
+          {canReopen && (
+            <button
+              type="button"
+              onClick={onReopen}
+              className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors"
+            >
+              <IconRefresh width={15} height={15} />
+              Reabrir
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="border-border bg-card rounded-[22px] border p-7 shadow-[var(--shadow-sm)]">
@@ -211,31 +223,60 @@ function IncidentDetail({
 
 export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("todas");
+  const [topView, setTopView] = useState<"abiertas" | "verificar">("abiertas");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reopenId, setReopenId] = useState<string | null>(null);
+  const [verifyId, setVerifyId] = useState<string | null>(null);
 
-  const selected = useMemo(
-    () => incidents.find((i) => i.id === selectedId) ?? null,
-    [incidents, selectedId],
+  const byId = (id: string | null) =>
+    id ? (incidents.find((i) => i.id === id) ?? null) : null;
+  const selected = byId(selectedId);
+  const reopenInc = byId(reopenId);
+  const verifyInc = byId(verifyId);
+
+  const match = (i: IncidentRow) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      i.title.toLowerCase().includes(q) ||
+      (i.response ?? "").toLowerCase().includes(q) ||
+      (i.label ?? "").toLowerCase().includes(q)
+    );
+  };
+
+  const abiertas = useMemo(
+    () => incidents.filter((i) => isOpen(i) && match(i)),
+    [incidents, query],
+  );
+  const porVerificar = useMemo(
+    () => incidents.filter((i) => isVerify(i) && match(i)),
+    [incidents, query],
+  );
+  const resueltas = useMemo(
+    () => incidents.filter((i) => isResolved(i) && match(i)),
+    [incidents, query],
   );
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return incidents.filter((i) => {
-      if (filter === "abiertas" && !isOpen(i)) return false;
-      if (filter === "resueltas" && isOpen(i)) return false;
-      if (!q) return true;
-      return (
-        i.title.toLowerCase().includes(q) ||
-        (i.response ?? "").toLowerCase().includes(q) ||
-        (i.label ?? "").toLowerCase().includes(q)
-      );
-    });
-  }, [incidents, query, filter]);
-
-  const open = filtered.filter(isOpen);
-  const resolved = filtered.filter((i) => !isOpen(i));
+  const modals = (
+    <>
+      {reopenInc && (
+        <ReopenIncidentModal
+          open
+          incidentId={reopenInc.id}
+          incidentTitle={reopenInc.title}
+          onClose={() => setReopenId(null)}
+        />
+      )}
+      {verifyInc && (
+        <VerifyIncidentModal
+          open
+          incidentId={verifyInc.id}
+          incidentTitle={verifyInc.title}
+          onClose={() => setVerifyId(null)}
+        />
+      )}
+    </>
+  );
 
   if (selected) {
     return (
@@ -243,39 +284,18 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
         <IncidentDetail
           incident={selected}
           onBack={() => setSelectedId(null)}
-          onReopen={() => setReopenOpen(true)}
+          onReopen={() => setReopenId(selected.id)}
+          onVerify={() => setVerifyId(selected.id)}
         />
-        <ReopenIncidentModal
-          open={reopenOpen}
-          incidentId={selected.id}
-          incidentTitle={selected.title}
-          onClose={() => setReopenOpen(false)}
-        />
+        {modals}
       </>
     );
   }
 
   return (
     <div className="space-y-8">
-      {/* Filtros + búsqueda */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="bg-muted flex gap-1 rounded-full p-1">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-                filter === f.key
-                  ? "bg-card text-brand-accent shadow-[var(--shadow-sm)]"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+      {/* Búsqueda */}
+      <div className="flex justify-end">
         <Input
           placeholder="Buscar incidencia…"
           value={query}
@@ -284,71 +304,108 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
         />
       </div>
 
-      {/* Abiertas — grid de tarjetas */}
+      {/* Bloque superior: Abiertas / Por verificar */}
       <section>
-        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-foreground text-[17px] font-bold tracking-tight">
-              Abiertas
-            </h2>
-            <span className="text-warning-foreground bg-warning rounded-full px-2.5 py-0.5 font-mono text-xs font-semibold">
-              {open.length}
-            </span>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="bg-muted flex gap-1 rounded-full p-1">
+            {(
+              [
+                { key: "abiertas", label: "Abiertas", n: abiertas.length },
+                { key: "verificar", label: "Por verificar", n: porVerificar.length },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTopView(t.key)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  topView === t.key
+                    ? "bg-card text-brand-accent shadow-[var(--shadow-sm)]"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t.label}
+                <span className="font-mono text-xs opacity-70">{t.n}</span>
+              </button>
+            ))}
           </div>
         </div>
-        {open.length === 0 ? (
-          <div className="border-border bg-card rounded-[20px] border px-6 py-8 text-center shadow-[var(--shadow-sm)]">
-            <div className="text-foreground text-[15px] font-semibold">
-              Sin incidencias abiertas
+
+        {topView === "abiertas" ? (
+          abiertas.length === 0 ? (
+            <EmptyCard
+              title="Sin incidencias abiertas"
+              sub="Todo está funcionando con normalidad."
+            />
+          ) : (
+            <div className="grid gap-3.5 min-[1100px]:grid-cols-4 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3">
+              {abiertas.map((i) => (
+                <IncidentCard key={i.id} i={i} onOpen={() => setSelectedId(i.id)} />
+              ))}
             </div>
-            <div className="text-muted-foreground mt-1 text-sm">
-              Todo está funcionando con normalidad.
-            </div>
-          </div>
+          )
+        ) : porVerificar.length === 0 ? (
+          <EmptyCard
+            title="Nada por verificar"
+            sub="Cuando resolvamos algo, aquí podrás verificarlo y valorarlo."
+          />
         ) : (
-          <div className="grid gap-3.5 min-[900px]:grid-cols-3 sm:grid-cols-2">
-            {open.map((i) => (
-              <button
+          <div className="grid gap-3.5 min-[1100px]:grid-cols-4 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3">
+            {porVerificar.map((i) => (
+              <div
                 key={i.id}
-                type="button"
-                onClick={() => setSelectedId(i.id)}
-                className="border-border bg-card flex flex-col rounded-[20px] border p-[22px] text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)]"
+                className="border-border bg-card flex flex-col rounded-[20px] border p-[18px] shadow-[var(--shadow-sm)]"
               >
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <span className="text-foreground text-[15.5px] font-semibold tracking-tight">
-                    {i.title}
-                  </span>
-                  <StatusBadge
-                    label={i.status}
-                    spec={incidentBadge(i.status)}
-                  />
-                </div>
-                {i.label && (
-                  <div className="mb-3">
-                    <StatusBadge label={i.label} spec={labelBadge(i.label)} />
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(i.id)}
+                  className="mb-3 text-left"
+                >
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
+                      {i.title}
+                    </span>
+                    <StatusBadge label={i.status} spec={incidentBadge(i.status)} />
                   </div>
-                )}
-                <div className="text-muted-foreground mt-auto text-[12.5px]">
-                  {formatDate(i.created_at)}
-                  {i.label ? ` · ${i.label}` : ""}
+                  <div className="text-muted-foreground text-[12px]">
+                    {formatDate(i.created_at)}
+                    {i.label ? ` · ${i.label}` : ""}
+                  </div>
+                </button>
+                <div className="mt-auto flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setVerifyId(i.id)}
+                    className="bg-brand text-brand-foreground flex flex-1 items-center justify-center gap-1.5 rounded-[11px] px-3 py-2 text-[12.5px] font-semibold transition-opacity hover:opacity-90"
+                  >
+                    <IconCheck width={14} height={14} /> Verificar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReopenId(i.id)}
+                    className="border-border bg-card text-foreground hover:bg-muted flex flex-1 items-center justify-center gap-1.5 rounded-[11px] border px-3 py-2 text-[12.5px] font-semibold transition-colors"
+                  >
+                    <IconRefresh width={14} height={14} /> Reabrir
+                  </button>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
       </section>
 
-      {/* Resueltas — tabla */}
+      {/* Bloque inferior: Resueltas */}
       <section>
         <div className="mb-3.5 flex items-center gap-2.5">
           <h2 className="text-foreground text-[17px] font-bold tracking-tight">
             Resueltas
           </h2>
           <span className="text-success-foreground bg-success rounded-full px-2.5 py-0.5 font-mono text-xs font-semibold">
-            {resolved.length}
+            {resueltas.length}
           </span>
         </div>
-        {resolved.length === 0 ? (
+        {resueltas.length === 0 ? (
           <p className="border-border bg-card text-muted-foreground rounded-[20px] border px-5 py-8 text-center text-sm shadow-[var(--shadow-sm)]">
             No hay incidencias resueltas que coincidan.
           </p>
@@ -357,22 +414,18 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
             <table className="w-full min-w-[600px] border-collapse">
               <thead>
                 <tr>
-                  <th className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase">
-                    Estado
-                  </th>
-                  <th className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase">
-                    Incidencia
-                  </th>
-                  <th className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase">
-                    Tipo
-                  </th>
-                  <th className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase">
-                    Resuelto
-                  </th>
+                  {["Estado", "Incidencia", "Tipo", "Resuelto"].map((h) => (
+                    <th
+                      key={h}
+                      className="text-muted-foreground px-[18px] py-3.5 text-left text-[11px] font-semibold tracking-[0.06em] uppercase"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {resolved.map((i) => (
+                {resueltas.map((i) => (
                   <tr
                     key={i.id}
                     onClick={() => setSelectedId(i.id)}
@@ -400,6 +453,44 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           </div>
         )}
       </section>
+
+      {modals}
     </div>
+  );
+}
+
+function EmptyCard({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div className="border-border bg-card rounded-[20px] border px-6 py-8 text-center shadow-[var(--shadow-sm)]">
+      <div className="text-foreground text-[15px] font-semibold">{title}</div>
+      <div className="text-muted-foreground mt-1 text-sm">{sub}</div>
+    </div>
+  );
+}
+
+function IncidentCard({
+  i,
+  onOpen,
+}: {
+  i: IncidentRow;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="border-border bg-card flex flex-col rounded-[20px] border p-[18px] text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)]"
+    >
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
+          {i.title}
+        </span>
+        <StatusBadge label={i.status} spec={incidentBadge(i.status)} />
+      </div>
+      <div className="text-muted-foreground mt-auto text-[12px]">
+        {formatDate(i.created_at)}
+        {i.label ? ` · ${i.label}` : ""}
+      </div>
+    </button>
   );
 }

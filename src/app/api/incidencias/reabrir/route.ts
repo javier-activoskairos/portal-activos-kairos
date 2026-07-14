@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const incidentId = String(form.get("incidentId") ?? "").trim();
   const motivo = String(form.get("motivo") ?? "").trim();
+  const loom = String(form.get("loom") ?? "").trim();
   const file = form.get("imagen");
   const imagen = file instanceof File && file.size > 0 ? file : null;
 
@@ -109,6 +110,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         incidenciaNotionId: incident.notion_id,
         motivo,
+        loom,
         correo: session.email,
         imagenUrl,
         imagenNombre,

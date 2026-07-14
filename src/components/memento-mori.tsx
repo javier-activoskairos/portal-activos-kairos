@@ -276,19 +276,24 @@ export function MementoMoriCalculator() {
 
   // Diagnóstico
   const friccion = v.busqueda + v.manual;
-  const diag =
-    friccion < 1
-      ? { level: "Fuga leve", color: "var(--success)" }
+  const sinFuga = friccion <= 0;
+  const diag = sinFuga
+    ? { level: "Sin fuga", color: "var(--success)" }
+    : friccion < 1
+      ? { level: "Fuga leve", color: "var(--info)" }
       : friccion < 2
         ? { level: "Fuga moderada", color: "var(--amber)" }
         : friccion < 3
           ? { level: "Fuga alta", color: "var(--orange)" }
           : { level: "Fuga crítica", color: "var(--danger)" };
 
-  const diagHtml =
-    `<p>Con un equipo de <b>${num(r.personas)} personas</b>, perdiendo <b>${num(r.busqueda, 2)} h/día</b> buscando información y <b>${num(r.manual, 2)} h/día</b> en procesos manuales, tu empresa deja escapar unas <span class="hl">${num(r.horasPerdidasMes)} horas al mes</span>.</p>` +
-    `<p>A ${eur(r.costeHora)}/h, son <span class="hl">${eur(r.costeMensual)} mensuales</span> de coste operativo invisible — <b>${eur(r.costeAnual)} al año</b> en tiempo que ya pagas pero que no se convierte en avance estratégico.</p>` +
-    `<p>Si reduces un 35% la búsqueda y automatizas un 40% de las tareas manuales, podrías recuperar unas <span class="hl">${num(r.recuperablesMes)} horas al mes</span>: más de <b>${num(r.diasRecuperablesMes)} días completos de trabajo</b> cada mes.</p>`;
+  const diagHtml = sinFuga
+    ? `<p>Cero fricción declarada: tu equipo de <b>${num(r.personas)} personas</b> no pierde tiempo buscando información ni repitiendo tareas manuales. <span class="hl">No hay fuga operativa.</span></p>` +
+      `<p>Eso significa que ya no dependes de la memoria humana ni del esfuerzo bruto: tienes <b>activos</b> que <b>potencian a las personas</b> que trabajan en la empresa, <b>elevan su valor y multiplican su potencial</b> en lugar de consumirlo en coordinación y repetición.</p>` +
+      `<p>…aunque, siendo sinceros: <span class="hl">¿seguro que no estás en Tempo?</span> Porque esto —convertir el caos en activos que trabajan por ti— es exactamente lo que hacemos aquí. 😏</p>`
+    : `<p>Con un equipo de <b>${num(r.personas)} personas</b>, perdiendo <b>${num(r.busqueda, 2)} h/día</b> buscando información y <b>${num(r.manual, 2)} h/día</b> en procesos manuales, tu empresa deja escapar unas <span class="hl">${num(r.horasPerdidasMes)} horas al mes</span>.</p>` +
+      `<p>A ${eur(r.costeHora)}/h, son <span class="hl">${eur(r.costeMensual)} mensuales</span> de coste operativo invisible — <b>${eur(r.costeAnual)} al año</b> en tiempo que ya pagas pero que no se convierte en avance estratégico.</p>` +
+      `<p>Si reduces un 35% la búsqueda y automatizas un 40% de las tareas manuales, podrías recuperar unas <span class="hl">${num(r.recuperablesMes)} horas al mes</span>: más de <b>${num(r.diasRecuperablesMes)} días completos de trabajo</b> cada mes.</p>`;
 
   return (
     <>

@@ -235,7 +235,7 @@ function IncidentDetail({
 }
 
 export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
-  const [query, setQuery] = useState("");
+  const [resueltasQuery, setResueltasQuery] = useState("");
   const [topView, setTopView] = useState<"abiertas" | "verificar">("abiertas");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reopenId, setReopenId] = useState<string | null>(null);
@@ -247,28 +247,26 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   const reopenInc = byId(reopenId);
   const verifyInc = byId(verifyId);
 
-  const match = (i: IncidentRow) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      i.title.toLowerCase().includes(q) ||
-      (i.response ?? "").toLowerCase().includes(q) ||
-      (i.label ?? "").toLowerCase().includes(q)
-    );
-  };
-
   const abiertas = useMemo(
-    () => incidents.filter((i) => isOpen(i) && match(i)),
-    [incidents, query],
+    () => incidents.filter(isOpen),
+    [incidents],
   );
   const porVerificar = useMemo(
-    () => incidents.filter((i) => isVerify(i) && match(i)),
-    [incidents, query],
+    () => incidents.filter(isVerify),
+    [incidents],
   );
-  const resueltas = useMemo(
-    () => incidents.filter((i) => isResolved(i) && match(i)),
-    [incidents, query],
-  );
+  const resueltas = useMemo(() => {
+    const q = resueltasQuery.trim().toLowerCase();
+    return incidents.filter((i) => {
+      if (!isResolved(i)) return false;
+      if (!q) return true;
+      return (
+        i.title.toLowerCase().includes(q) ||
+        (i.response ?? "").toLowerCase().includes(q) ||
+        (i.label ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [incidents, resueltasQuery]);
 
   const modals = (
     <>
@@ -307,16 +305,6 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
 
   return (
     <div className="space-y-8">
-      {/* Búsqueda */}
-      <div className="flex justify-end">
-        <Input
-          placeholder="Buscar incidencia…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="h-11 rounded-[14px] sm:max-w-xs"
-        />
-      </div>
-
       {/* Bloque superior: Abiertas / Por verificar */}
       <section>
         <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -410,13 +398,19 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
 
       {/* Bloque inferior: Resueltas */}
       <section>
-        <div className="mb-3.5 flex items-center gap-2.5">
+        <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
           <h2 className="text-foreground text-[17px] font-bold tracking-tight">
             Resueltas
           </h2>
           <span className="text-success-foreground bg-success rounded-full px-2.5 py-0.5 font-mono text-xs font-semibold">
             {resueltas.length}
           </span>
+          <Input
+            placeholder="Buscar resueltas…"
+            value={resueltasQuery}
+            onChange={(e) => setResueltasQuery(e.target.value)}
+            className="ml-auto h-10 rounded-[12px] sm:max-w-xs"
+          />
         </div>
         {resueltas.length === 0 ? (
           <p className="border-border bg-card text-muted-foreground rounded-[20px] border px-5 py-8 text-center text-sm shadow-[var(--shadow-sm)]">
@@ -435,9 +429,6 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                       {h}
                     </th>
                   ))}
-                  <th className="text-muted-foreground px-[18px] py-3.5 text-right text-[11px] font-semibold tracking-[0.06em] uppercase">
-                    Respuesta
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -461,22 +452,6 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                     </td>
                     <td className="text-muted-foreground px-[18px] py-4 align-middle text-sm whitespace-nowrap">
                       {formatDate(i.resolved_at)}
-                    </td>
-                    <td className="px-[18px] py-4 text-right align-middle whitespace-nowrap">
-                      {i.response_url ? (
-                        <a
-                          href={i.response_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="border-border bg-card text-foreground hover:bg-muted inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 py-1.5 text-[12.5px] font-medium transition-colors"
-                        >
-                          <IconExternal width={13} height={13} />
-                          Ver
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground/50 text-sm">—</span>
-                      )}
                     </td>
                   </tr>
                 ))}

@@ -178,7 +178,7 @@ function IncidentDetail({
               className="border-border bg-card text-foreground hover:bg-muted mt-3 inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[13px] font-semibold transition-colors"
             >
               <IconExternal width={15} height={15} />
-              Ver respuesta completa
+              Ver video asociado
             </a>
           )}
         </div>

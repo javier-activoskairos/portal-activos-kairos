@@ -124,7 +124,11 @@ export default async function InicioPage() {
     OPEN_INCIDENTS.includes(i.status),
   ).length;
 
-  const firstName = nameFromEmail(session?.email ?? "");
+  // En "Ver como cliente" saludamos con la identidad del cliente representativo.
+  const firstName = session?.viewingAs
+    ? (session.viewingAs.displayName?.split(" ")[0] ??
+      nameFromEmail(session.viewingAs.userEmail))
+    : nameFromEmail(session?.email ?? "");
 
   const kpis = [
     {

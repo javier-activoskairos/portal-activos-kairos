@@ -28,8 +28,10 @@ export async function hydrateProfileFromNotion(opts: {
   userId: string;
   contactNotionId: string;
   current: ProfileValues;
+  /** false en "Ver como cliente": solo combina para mostrar, no escribe. */
+  persist?: boolean;
 }): Promise<ProfileValues> {
-  const { userId, contactNotionId, current } = opts;
+  const { userId, contactNotionId, current, persist = true } = opts;
   try {
     const page: any = await notionClient().pages.retrieve({
       page_id: contactNotionId,
@@ -58,6 +60,12 @@ export async function hydrateProfileFromNotion(opts: {
       birthday: current.birthday || crm.birthday,
       avatarUrl: current.avatarUrl,
     };
+
+    // Solo lectura (preview): combina para mostrar sin escribir nada.
+    if (!persist) {
+      if (!merged.avatarUrl && crmImageUrl) merged.avatarUrl = crmImageUrl;
+      return merged;
+    }
 
     const admin = createAdminClient();
 
@@ -137,8 +145,9 @@ export async function hydrateCompanyFromNotion(opts: {
   companyId: string;
   notionId: string;
   current: CompanyFiscal;
+  persist?: boolean;
 }): Promise<CompanyFiscal> {
-  const { companyId, notionId, current } = opts;
+  const { companyId, notionId, current, persist = true } = opts;
   try {
     const page: any = await notionClient().pages.retrieve({ page_id: notionId });
     const p = page.properties ?? {};
@@ -165,7 +174,7 @@ export async function hydrateCompanyFromNotion(opts: {
     if (!current.city && merged.city) patch.city = merged.city;
     if (!current.postalCode && merged.postalCode) patch.postal_code = merged.postalCode;
 
-    if (Object.keys(patch).length > 0) {
+    if (persist && Object.keys(patch).length > 0) {
       const admin = createAdminClient();
       await admin.from("companies").update(patch).eq("id", companyId);
     }

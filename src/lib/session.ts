@@ -21,9 +21,23 @@ export interface PortalSession {
   /** Rol "Facturación": puede cambiar la configuración de su empresa. */
   canManageCompany: boolean;
   role: "client" | "admin";
-  /** Presente si un admin está previsualizando el portal de otro cliente. */
-  viewingAs?: { companyId: string; companyName: string };
+  /** Presente si un admin está previsualizando el portal de otro cliente.
+   * Incluye la identidad de un usuario representativo de esa empresa para
+   * impersonar del todo (saludo, bloque de usuario, perfil de configuración). */
+  viewingAs?: {
+    companyId: string;
+    companyName: string;
+    userEmail: string;
+    displayName: string | null;
+    contactNotionId: string | null;
+    portalUserId: string | null;
+    avatarUrl: string | null;
+  };
 }
+
+// Buzones genéricos que preferimos NO usar como identidad representativa.
+const GENERIC_MAILBOX =
+  /^(admin|administracion|administración|facturacion|facturación|info|hola|contacto|ventas|soporte|hello|team|equipo|no-?reply)$/i;
 
 /**
  * Resuelve la sesión del portal: usuario auth + su fila portal_users + empresa.
@@ -86,9 +100,35 @@ export async function getPortalSession(): Promise<PortalSession | null> {
         session.plan = tgt.plan ?? null;
         session.sector = tgt.sector ?? null;
         session.planStreakWeeks = tgt.plan_streak_weeks ?? 0;
+
+        // Usuario representativo de la empresa: impersonación completa.
+        const { data: reps } = await admin
+          .from("portal_users")
+          .select("id, email, contact_notion_id, first_name, last_name, avatar_url")
+          .eq("company_id", tgt.id)
+          .eq("active", true)
+          .neq("role", "admin");
+        const best = (reps ?? []).slice().sort((a, b) => {
+          const ga = GENERIC_MAILBOX.test(a.email.split("@")[0]) ? 1 : 0;
+          const gb = GENERIC_MAILBOX.test(b.email.split("@")[0]) ? 1 : 0;
+          if (ga !== gb) return ga - gb;
+          const na = a.first_name ? 0 : 1;
+          const nb = b.first_name ? 0 : 1;
+          if (na !== nb) return na - nb;
+          return a.email.localeCompare(b.email);
+        })[0];
+        const displayName = best
+          ? [best.first_name, best.last_name].filter(Boolean).join(" ") || null
+          : null;
+
         session.viewingAs = {
           companyId: tgt.id,
           companyName: tgt.name ?? "Cliente",
+          userEmail: best?.email ?? session.email,
+          displayName,
+          contactNotionId: best?.contact_notion_id ?? null,
+          portalUserId: best?.id ?? null,
+          avatarUrl: best?.avatar_url ?? null,
         };
       }
     }

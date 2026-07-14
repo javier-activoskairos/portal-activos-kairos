@@ -78,6 +78,8 @@ export function PortalNav({
   isAdmin,
   canBilling = false,
   openIncidents = 0,
+  displayName = null,
+  avatarUrl = null,
 }: {
   email: string;
   companyName: string;
@@ -85,6 +87,8 @@ export function PortalNav({
   isAdmin: boolean;
   canBilling?: boolean;
   openIncidents?: number;
+  displayName?: string | null;
+  avatarUrl?: string | null;
 }) {
   // "Facturación" solo para el rol Facturación.
   const navItems = NAV_ITEMS.filter(
@@ -92,6 +96,7 @@ export function PortalNav({
   );
   const pathname = usePathname();
   const initials = initialsFromEmail(email);
+  const shownName = displayName || fullNameFromEmail(email);
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -365,17 +370,26 @@ export function PortalNav({
             >
               <Link
                 href="/configuracion"
-                title={collapsed ? fullNameFromEmail(email) : "Configuración"}
+                title={collapsed ? shownName : "Configuración"}
                 aria-label="Configuración"
-                className="bg-accent text-brand-accent flex size-[34px] shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                className="bg-accent text-brand-accent flex size-[34px] shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold"
               >
-                {initials}
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  initials
+                )}
               </Link>
               {!collapsed && (
                 <>
                   <div className="min-w-0 flex-1">
                     <div className="text-foreground truncate text-[13px] font-semibold">
-                      {fullNameFromEmail(email)}
+                      {shownName}
                     </div>
                     <div className="text-muted-foreground truncate text-[11.5px]">
                       {email}

@@ -14,14 +14,15 @@ export default async function ConfiguracionPage() {
   if (!ctx) redirect("/acceso-denegado");
   const { session, db, companyId } = ctx;
 
+  const va = session.viewingAs;
+  const profileCols =
+    "first_name, last_name, phone, role_title, personal_email, birthday, avatar_url";
+  const profileQuery = va?.portalUserId
+    ? db.from("portal_users").select(profileCols).eq("id", va.portalUserId)
+    : db.from("portal_users").select(profileCols).eq("auth_user_id", session.userId);
+
   const [{ data: profile }, { data: company }] = await Promise.all([
-    db
-      .from("portal_users")
-      .select(
-        "first_name, last_name, phone, role_title, personal_email, birthday, avatar_url",
-      )
-      .eq("auth_user_id", session.userId)
-      .maybeSingle(),
+    profileQuery.maybeSingle(),
     db
       .from("companies")
       .select("notion_id, fiscal_name, tax_id, address, city, region, postal_code")
@@ -48,11 +49,14 @@ export default async function ConfiguracionPage() {
   };
 
   // Doble sync (Notion→Portal): rellena desde el CRM lo que esté vacío.
-  if (session.contactNotionId) {
+  // En "Ver como cliente" se usa la identidad del cliente y NO se escribe.
+  const contactNotionId = va ? va.contactNotionId : session.contactNotionId;
+  if (contactNotionId) {
     profileValues = await hydrateProfileFromNotion({
       userId: session.userId,
-      contactNotionId: session.contactNotionId,
+      contactNotionId,
       current: profileValues,
+      persist: !va,
     });
   }
   if (company?.notion_id) {
@@ -60,12 +64,13 @@ export default async function ConfiguracionPage() {
       companyId,
       notionId: company.notion_id,
       current: companyValues,
+      persist: !va,
     });
   }
 
   return (
     <ConfigView
-      email={session.email}
+      email={va ? va.userEmail : session.email}
       canManageCompany={session.canManageCompany}
       readOnly={!!session.viewingAs}
       profile={profileValues}

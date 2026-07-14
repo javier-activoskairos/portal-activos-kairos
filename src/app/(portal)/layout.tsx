@@ -29,10 +29,26 @@ export default async function PortalLayout({
     .eq("company_id", companyId)
     .in("status", OPEN_INCIDENTS);
 
+  // Perfil del usuario (avatar/nombre) para el bloque inferior de la nav.
+  const { data: me } = await db
+    .from("portal_users")
+    .select("first_name, last_name, avatar_url")
+    .eq("auth_user_id", session.userId)
+    .maybeSingle();
+
+  const va = session.viewingAs;
+  const navEmail = va?.userEmail ?? session.email;
+  const navDisplayName = va
+    ? va.displayName
+    : [me?.first_name, me?.last_name].filter(Boolean).join(" ") || null;
+  const navAvatar = va ? va.avatarUrl : (me?.avatar_url ?? null);
+
   return (
     <div className="bg-background min-h-screen">
       <PortalNav
-        email={session.email}
+        email={navEmail}
+        displayName={navDisplayName}
+        avatarUrl={navAvatar}
         companyName={session.companyName}
         logoUrl={session.logoUrl}
         isAdmin={session.role === "admin"}

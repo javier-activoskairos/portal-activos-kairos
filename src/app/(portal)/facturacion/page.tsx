@@ -23,6 +23,7 @@ interface Invoice {
   currency: string | null;
   status: string;
   issued_at: string | null;
+  pdf_url: string | null;
 }
 
 const INVOICE_STATUS: Record<string, { label: string; cls: string; dot: string }> = {
@@ -71,7 +72,7 @@ export default async function FacturacionPage() {
       .maybeSingle(),
     db
       .from("invoices")
-      .select("id, number, concept, amount, currency, status, issued_at")
+      .select("id, number, concept, amount, currency, status, issued_at, pdf_url")
       .eq("company_id", companyId)
       .order("issued_at", { ascending: false }),
   ]);
@@ -224,14 +225,28 @@ export default async function FacturacionPage() {
                     {inv.currency ? ` ${inv.currency}` : ""}
                   </td>
                   <td className="px-[18px] py-4 text-right align-middle">
-                    <a
-                      href={`/api/facturas/${inv.id}/pdf`}
-                      download={`${inv.number || inv.concept || "factura"}.pdf`}
-                      className="border-border bg-card text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-[10px] border px-3 text-[12.5px] font-medium transition-colors"
-                    >
-                      <IconDownload />
-                      PDF
-                    </a>
+                    {(() => {
+                      const dl = `${inv.number || inv.concept || "factura"}.pdf`.replace(
+                        /[^\w.-]+/g,
+                        "-",
+                      );
+                      // PDF real: enlace directo a Supabase con ?download (fuerza
+                      // la descarga y el nombre, sin redirect cross-origin que
+                      // Chrome bloquea). PDF generado: nuestra ruta.
+                      const href = inv.pdf_url
+                        ? `${inv.pdf_url}${inv.pdf_url.includes("?") ? "&" : "?"}download=${encodeURIComponent(dl)}`
+                        : `/api/facturas/${inv.id}/pdf`;
+                      return (
+                        <a
+                          href={href}
+                          download={inv.pdf_url ? undefined : dl}
+                          className="border-border bg-card text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-[10px] border px-3 text-[12.5px] font-medium transition-colors"
+                        >
+                          <IconDownload />
+                          PDF
+                        </a>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

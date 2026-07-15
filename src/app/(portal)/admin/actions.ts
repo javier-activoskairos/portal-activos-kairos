@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPortalSession } from "@/lib/session";
 import { syncIncidents } from "@/lib/sync/incidents";
-import { syncAssets } from "@/lib/sync/assets";
+import { syncAssets, syncAssetTasks } from "@/lib/sync/assets";
 import { syncMeetings } from "@/lib/sync/meetings";
 import { syncInvoices } from "@/lib/sync/invoices";
 import {
@@ -17,6 +17,7 @@ import { syncPortalMembers } from "@/lib/sync/members";
 /** Fuentes que se pueden sincronizar por separado desde el panel interno. */
 export type PartialSource =
   | "assets"
+  | "tasks"
   | "incidents"
   | "meetings"
   | "companies"
@@ -57,6 +58,11 @@ export async function runPartialSync(
         const r = await syncAssets("manual");
         if (r.status === "error") throw new Error(r.error ?? "error");
         detail = `${r.rowsUpserted} activos · ${r.rowsRead} leídos`;
+        break;
+      }
+      case "tasks": {
+        const r = await syncAssetTasks();
+        detail = `${r.tasks} tareas · ${r.assets} activos`;
         break;
       }
       case "incidents": {

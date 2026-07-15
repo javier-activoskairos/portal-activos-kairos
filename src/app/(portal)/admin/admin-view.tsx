@@ -12,6 +12,7 @@ const PARTIAL_SOURCES: {
   hint: string;
 }[] = [
   { key: "assets", label: "Activos Kairos", hint: "Activos + tareas" },
+  { key: "tasks", label: "Tareas", hint: "Solo tareas del detalle" },
   { key: "incidents", label: "Incidencias", hint: "Estados y respuestas" },
   { key: "meetings", label: "Reuniones", hint: "Astrapi · Areté · Prótos" },
   { key: "companies", label: "Empresas", hint: "Plan, logo, sector" },

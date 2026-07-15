@@ -83,6 +83,49 @@ async function fetchTasksByAsset(
   return byAsset;
 }
 
+/**
+ * Sincroniza SOLO las tareas ([AKC] - Tareas) de los activos ya replicados,
+ * sin volver a leer los activos. Se ven en el detalle de cada Activo Kairos.
+ */
+export async function syncAssetTasks() {
+  const admin = createAdminClient();
+  const notion = notionClient();
+  const companies = await getActiveCompanies(admin);
+
+  let assetsTouched = 0;
+  let tasksTotal = 0;
+
+  for (const company of companies) {
+    let tasksByAsset = new Map<string, Task[]>();
+    try {
+      tasksByAsset = await fetchTasksByAsset(notion, company.notion_id);
+    } catch (e) {
+      console.error(
+        `[sync:tasks] tareas no disponibles (${company.notion_id}): ${(e as Error).message}`,
+      );
+      continue;
+    }
+
+    const { data: rows, error } = await admin
+      .from("assets")
+      .select("id, notion_id")
+      .eq("company_id", company.id);
+    if (error) throw error;
+
+    for (const a of rows ?? []) {
+      const tasks = tasksByAsset.get(a.notion_id) ?? [];
+      const up = await admin.from("assets").update({ tasks }).eq("id", a.id);
+      if (up.error) {
+        console.error(`[sync:tasks] ${a.notion_id}`, up.error.message);
+        continue;
+      }
+      assetsTouched++;
+      tasksTotal += tasks.length;
+    }
+  }
+  return { status: "success" as const, assets: assetsTouched, tasks: tasksTotal };
+}
+
 async function fetchAndUpsert(admin: Admin) {
   const notion = notionClient();
   const dbId = process.env.NOTION_ASSETS_DB!;

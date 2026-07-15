@@ -2,8 +2,22 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { IconAlert, IconLock } from "@/components/icons";
-import { runAllSync } from "./actions";
+import { runAllSync, runPartialSync, type PartialSource } from "./actions";
 import { viewAsClient } from "./view-as-actions";
+
+// Fuentes sincronizables por separado (panel interno).
+const PARTIAL_SOURCES: {
+  key: PartialSource;
+  label: string;
+  hint: string;
+}[] = [
+  { key: "assets", label: "Activos Kairos", hint: "Activos + tareas" },
+  { key: "incidents", label: "Incidencias", hint: "Estados y respuestas" },
+  { key: "meetings", label: "Reuniones", hint: "Astrapi · Areté · Prótos" },
+  { key: "companies", label: "Empresas", hint: "Plan, logo, sector" },
+  { key: "memberships", label: "Suscripciones", hint: "Precio, recurrencia, racha" },
+  { key: "invoices", label: "Facturas", hint: "Historial + PDFs" },
+];
 
 export interface RunRow {
   id: string;
@@ -178,6 +192,29 @@ export function AdminView({
   const [pickedCompany, setPickedCompany] = useState<ClientRow | null>(null);
   const [pending, startTransition] = useTransition();
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  // Sincronización parcial: panel + fuente en curso.
+  const [partialOpen, setPartialOpen] = useState(false);
+  const [runningSource, setRunningSource] = useState<PartialSource | null>(null);
+  const [partialMsg, setPartialMsg] = useState<string | null>(null);
+
+  function syncOne(src: PartialSource, label: string) {
+    setPartialMsg(null);
+    setRunningSource(src);
+    startTransition(async () => {
+      try {
+        const r = await runPartialSync(src);
+        setPartialMsg(
+          r.ok ? `${label} · ${r.detail}` : `${label} · Error: ${r.detail}`,
+        );
+      } catch (e) {
+        setPartialMsg(
+          `${label} · Error: ${e instanceof Error ? e.message : e}`,
+        );
+      } finally {
+        setRunningSource(null);
+      }
+    });
+  }
 
   // Evita desajustes de hidratación en textos con hora relativa.
   const [mounted, setMounted] = useState(false);
@@ -282,6 +319,57 @@ export function AdminView({
               {syncMsg}
             </p>
           )}
+
+          {/* Sincronización parcial — elegir una sola base de datos */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setPartialOpen((v) => !v)}
+              className="border-border bg-card text-foreground hover:bg-muted flex w-full items-center gap-2.5 rounded-[14px] border px-4 py-3 text-sm font-semibold shadow-[var(--shadow-sm)] transition-colors"
+            >
+              <IconRefresh />
+              Sincronizar parcialmente
+              <span className="text-muted-foreground ml-auto text-xs font-semibold">
+                elige la base de datos
+              </span>
+              <IconChevron open={partialOpen} />
+            </button>
+
+            {partialOpen && (
+              <div className="mt-3 grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
+                {PARTIAL_SOURCES.map((s) => {
+                  const busy = runningSource === s.key;
+                  return (
+                    <button
+                      key={s.key}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => syncOne(s.key, s.label)}
+                      className="border-border bg-card hover:bg-muted flex items-center gap-3 rounded-2xl border p-3.5 text-left shadow-[var(--shadow-sm)] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <span className="bg-accent text-brand-accent flex size-9 shrink-0 items-center justify-center rounded-xl">
+                        <IconRefresh className={busy ? "kp-spin" : ""} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="text-foreground block text-[14px] font-semibold">
+                          {s.label}
+                        </span>
+                        <span className="text-muted-foreground block text-[12px]">
+                          {busy ? "Sincronizando…" : s.hint}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {partialMsg && (
+              <p className="text-muted-foreground mt-2.5 font-mono text-xs">
+                {partialMsg}
+              </p>
+            )}
+          </div>
 
           {/* Rejilla de stats */}
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">

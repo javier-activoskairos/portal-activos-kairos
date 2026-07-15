@@ -15,8 +15,8 @@ export const metadata = { title: "Inicio · Portal Activos Kairos" };
 export const dynamic = "force-dynamic";
 
 // Mismos estados que el bloque "Abiertas" de la vista de Incidencias.
-// ("Verificación" va a Por verificar; las "Solucionada*" van a Resueltas.)
-const OPEN_INCIDENTS = ["Pendiente", "Solucionando", "En Espera", "Escalada"];
+// ("Verificación" va a Por verificar; Solucionada*/Escalada van a Resueltas.)
+const OPEN_INCIDENTS = ["Pendiente", "Solucionando", "En Espera"];
 
 const MONTHS_ES = [
   "Ene",

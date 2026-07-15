@@ -32,10 +32,15 @@ export interface IncidentRow {
   sla_deadline: string | null;
 }
 
-// Grupos por Estado de Notion.
-const OPEN = new Set(["Pendiente", "Solucionando", "En Espera", "Escalada"]);
+// Grupos por Estado de Notion (mismos grupos que el status de Notion).
+const OPEN = new Set(["Pendiente", "Solucionando", "En Espera"]);
 const VERIFY = new Set(["Verificación"]);
-const RESOLVED = new Set(["Solucionada", "Solucionada con Acciones Pendientes"]);
+// "Complete" en Notion: incluye Escalada y Solucionada con Acciones Pendientes.
+const RESOLVED = new Set([
+  "Solucionada",
+  "Solucionada con Acciones Pendientes",
+  "Escalada",
+]);
 
 const isOpen = (i: IncidentRow) => OPEN.has(i.status);
 const isVerify = (i: IncidentRow) => VERIFY.has(i.status);
@@ -257,15 +262,22 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   );
   const resueltas = useMemo(() => {
     const q = resueltasQuery.trim().toLowerCase();
-    return incidents.filter((i) => {
-      if (!isResolved(i)) return false;
-      if (!q) return true;
-      return (
-        i.title.toLowerCase().includes(q) ||
-        (i.response ?? "").toLowerCase().includes(q) ||
-        (i.label ?? "").toLowerCase().includes(q)
-      );
-    });
+    return incidents
+      .filter((i) => {
+        if (!isResolved(i)) return false;
+        if (!q) return true;
+        return (
+          i.title.toLowerCase().includes(q) ||
+          (i.response ?? "").toLowerCase().includes(q) ||
+          (i.label ?? "").toLowerCase().includes(q)
+        );
+      })
+      // Por fecha fin descendente; las que no la tienen, al final.
+      .sort((a, b) => {
+        const ta = a.resolved_at ? Date.parse(a.resolved_at) : -Infinity;
+        const tb = b.resolved_at ? Date.parse(b.resolved_at) : -Infinity;
+        return tb - ta;
+      });
   }, [incidents, resueltasQuery]);
 
   const modals = (

@@ -14,13 +14,9 @@ import {
 export const metadata = { title: "Inicio · Portal Activos Kairos" };
 export const dynamic = "force-dynamic";
 
-const OPEN_INCIDENTS = [
-  "Pendiente",
-  "Solucionando",
-  "En Espera",
-  "Escalada",
-  "Solucionada con Acciones Pendientes",
-];
+// Mismos estados que el bloque "Abiertas" de la vista de Incidencias.
+// ("Verificación" va a Por verificar; las "Solucionada*" van a Resueltas.)
+const OPEN_INCIDENTS = ["Pendiente", "Solucionando", "En Espera", "Escalada"];
 
 const MONTHS_ES = [
   "Ene",
@@ -381,11 +377,11 @@ export default async function InicioPage() {
         </div>
       </div>
 
-      {/* 3 KPIs numéricos con color condicional */}
+      {/* 3 KPIs numéricos — cada uno siempre con su color */}
       <div className="grid gap-3 sm:grid-cols-3">
         {kpis.map((k) => {
           const Icon = k.icon;
-          const active = k.value > 0;
+          const active = true;
           const tone = KPI_TONE[k.tone];
           return (
             <Link

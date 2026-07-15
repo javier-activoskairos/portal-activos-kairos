@@ -47,7 +47,12 @@ export async function syncMemberships() {
   // Mapa notionEmpresaId → datos de facturación.
   const byEmpresa = new Map<
     string,
-    { amount: string | null; cycle: string | null; next: string | null }
+    {
+      amount: string | null;
+      cycle: string | null;
+      next: string | null;
+      streak: number;
+    }
   >();
   for (const m of memberships) {
     const p = m.properties ?? {};
@@ -56,10 +61,25 @@ export async function syncMemberships() {
     const precio = p["Precio"]?.number ?? null;
     const symbol = formulaValue(p["SYMB"]) || "€";
     const recurrencia = statusName(p["Recurrencia"]);
+    // Racha real: semanas desde "Inicio Tempo" (fórmula "Racha Semanas").
+    const rachaFormula = p["Racha Semanas"]?.formula?.number;
+    const inicio = dateStart(p["Inicio Tempo"]);
+    const streak =
+      typeof rachaFormula === "number"
+        ? Math.max(0, Math.floor(rachaFormula))
+        : inicio
+          ? Math.max(
+              0,
+              Math.floor(
+                (Date.now() - Date.parse(inicio)) / (7 * 24 * 3600 * 1000),
+              ),
+            )
+          : 0;
     byEmpresa.set(empresaId, {
       amount: precio != null ? `${nfmt.format(precio)} ${symbol}` : null,
       cycle: recurrencia ? (CYCLE_PHRASE[recurrencia] ?? null) : null,
       next: dateStart(p["Siguiente Pago"]),
+      streak,
     });
   }
 
@@ -72,7 +92,16 @@ export async function syncMemberships() {
   let updated = 0;
   for (const c of companies ?? []) {
     const b = c.notion_id ? byEmpresa.get(normalizeId(c.notion_id)!) : undefined;
-    if (!b || (!b.amount && !b.cycle && !b.next)) continue;
+    if (!b) continue;
+
+    // Racha de la membresía (semanas desde Inicio Tempo).
+    const upC = await admin
+      .from("companies")
+      .update({ plan_streak_weeks: b.streak })
+      .eq("id", c.id);
+    if (upC.error) console.error(`[sync:memberships] racha ${c.id}`, upC.error.message);
+
+    if (!b.amount && !b.cycle && !b.next) continue;
     const up = await admin.from("company_billing").upsert(
       {
         company_id: c.id,
@@ -237,22 +266,14 @@ export async function syncCompanies() {
       const esTempo = props?.["Es Tempo?"]?.formula?.boolean === true;
       const tieneMembresia = (props?.["Membresía"]?.relation?.length ?? 0) > 0;
 
-      // Racha de semanas (Tempo/Stasis): semanas desde el alta de la empresa.
-      const createdMs = Date.parse(page.created_time || "");
-      const streakWeeks = Number.isNaN(createdMs)
-        ? 0
-        : Math.max(
-            0,
-            Math.floor((Date.now() - createdMs) / (7 * 24 * 3600 * 1000)),
-          );
-
+      // La racha NO se calcula aquí: viene de la membresía ("Inicio Tempo"),
+      // la fija syncMemberships.
       const patch: Record<string, string | boolean | number | null> = {
         plan: derivePlan(props),
         sector: props?.["Sector"]?.select?.name ?? null,
         estado,
         // Es o ha sido cliente: Estado Cliente, o con membresía, o Es Tempo.
         is_client: estado === "Cliente" || esTempo || tieneMembresia,
-        plan_streak_weeks: streakWeeks,
       };
 
       // Logo (opcional): descargar y re-hospedar si existe.

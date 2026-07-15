@@ -15,7 +15,12 @@ const PARTIAL_SOURCES: {
   { key: "incidents", label: "Incidencias", hint: "Estados y respuestas" },
   { key: "meetings", label: "Reuniones", hint: "Astrapi · Areté · Prótos" },
   { key: "companies", label: "Empresas", hint: "Plan, logo, sector" },
-  { key: "memberships", label: "Suscripciones", hint: "Precio, recurrencia, racha" },
+  { key: "contacts", label: "Contactos", hint: "Usuarios Avans / Facturación" },
+  {
+    key: "memberships",
+    label: "Membresías",
+    hint: "Precio, recurrencia, racha",
+  },
   { key: "invoices", label: "Facturas", hint: "Historial + PDFs" },
 ];
 

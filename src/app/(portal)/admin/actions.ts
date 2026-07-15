@@ -10,7 +10,9 @@ import {
   seedClientCompanies,
   syncCompanies,
   syncMemberships,
+  syncPortalUserContacts,
 } from "@/lib/sync/companies";
+import { syncPortalMembers } from "@/lib/sync/members";
 
 /** Fuentes que se pueden sincronizar por separado desde el panel interno. */
 export type PartialSource =
@@ -18,6 +20,7 @@ export type PartialSource =
   | "incidents"
   | "meetings"
   | "companies"
+  | "contacts"
   | "memberships"
   | "invoices";
 
@@ -71,6 +74,14 @@ export async function runPartialSync(
         const seed = await seedClientCompanies();
         const r = await syncCompanies();
         detail = `${r.updated} empresas · ${seed.created} nuevas`;
+        break;
+      }
+      case "contacts": {
+        // Provisiona usuarios de los contactos elegibles (Avans/Facturación de
+        // empresas con membresía) y enlaza cada usuario con su Contacto.
+        const m = await syncPortalMembers({ apply: true });
+        const c = await syncPortalUserContacts();
+        detail = `${m.created} usuarios nuevos · ${m.updated} actualizados · ${c.matched} contactos enlazados`;
         break;
       }
       case "memberships": {

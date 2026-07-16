@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconCheck, IconClose, IconRefresh } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
 
@@ -46,7 +47,7 @@ export function ReopenIncidentModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const valid = motivo.trim().length > 0;
 
@@ -83,7 +84,7 @@ export function ReopenIncidentModal({
   const fieldClass =
     "border-border bg-muted/60 text-foreground focus:border-brand/50 w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors";
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       className="animate-in fade-in-0 fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(15,12,9,0.55)] p-5 backdrop-blur-[4px] duration-200"
@@ -229,6 +230,7 @@ export function ReopenIncidentModal({
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

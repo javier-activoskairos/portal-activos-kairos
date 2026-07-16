@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconCheck, IconClose } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
 
@@ -42,7 +43,7 @@ export function VerifyIncidentModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const submit = async () => {
     if (stars < 1 || loading) return;
@@ -67,7 +68,7 @@ export function VerifyIncidentModal({
 
   const shown = hover || stars;
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       className="animate-in fade-in-0 fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(15,12,9,0.55)] p-5 backdrop-blur-[4px] duration-200"
@@ -182,6 +183,7 @@ export function VerifyIncidentModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

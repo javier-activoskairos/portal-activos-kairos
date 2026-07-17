@@ -44,6 +44,33 @@ function mapIncident(page: any, companyId: string) {
   };
 }
 
+/**
+ * Escribe el uuid de Supabase en la propiedad "Supabase ID" de Notion.
+ *
+ * Solo escribe cuando el valor difiere del que ya hay: escribir en Notion
+ * cambia last_edited_time, que es justo lo que dispara la sync incremental,
+ * así que un PATCH incondicional se realimentaría en cada pasada. Comparando
+ * primero, la página se reescribe una vez y a partir de ahí queda estable.
+ */
+async function writeBackSupabaseIds(
+  notion: ReturnType<typeof notionClient>,
+  rows: Array<{ id: string; notion_id: string }>,
+  currentIds: Map<string, string | null>,
+) {
+  let written = 0;
+  for (const row of rows) {
+    if ((currentIds.get(row.notion_id) ?? null) === row.id) continue;
+    await notion.pages.update({
+      page_id: row.notion_id,
+      properties: {
+        "Supabase ID": { rich_text: [{ text: { content: row.id } }] },
+      },
+    });
+    written++;
+  }
+  return written;
+}
+
 async function fetchAndUpsert(admin: Admin, since: string | null) {
   const notion = notionClient();
   const dbId = process.env.NOTION_INCIDENTS_DB!;
@@ -51,6 +78,7 @@ async function fetchAndUpsert(admin: Admin, since: string | null) {
 
   let rowsRead = 0;
   let rowsUpserted = 0;
+  let idsWritten = 0;
 
   // Multi-empresa: sincroniza las incidencias de cada empresa activa.
   for (const company of companies) {
@@ -77,16 +105,30 @@ async function fetchAndUpsert(admin: Admin, since: string | null) {
       rowsRead += res.results.length;
       const rows = res.results.map((pg: any) => mapIncident(pg, company.id));
       if (rows.length > 0) {
-        const { error } = await admin
+        const { data: saved, error } = await admin
           .from("incidents")
-          .upsert(rows, { onConflict: "notion_id" });
+          .upsert(rows, { onConflict: "notion_id" })
+          .select("id, notion_id");
         if (error) throw new Error(`Upsert incidents: ${error.message}`);
         rowsUpserted += rows.length;
+
+        const currentIds = new Map<string, string | null>(
+          res.results.map((pg: any) => [
+            pg.id,
+            plainText(pg.properties["Supabase ID"]),
+          ]),
+        );
+        idsWritten += await writeBackSupabaseIds(
+          notion,
+          saved ?? [],
+          currentIds,
+        );
       }
       cursor = res.has_more ? res.next_cursor : undefined;
     } while (cursor);
   }
 
+  console.log(`[sync:incidents] Supabase IDs escritos en Notion: ${idsWritten}`);
   return { rowsRead, rowsUpserted };
 }
 

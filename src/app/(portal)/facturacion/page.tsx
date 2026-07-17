@@ -58,6 +58,16 @@ function fmtDate(d: string | null): string {
   });
 }
 
+/** Formatea el importe a es-ES con 2 decimales ("1159.55" → "1.159,55"). */
+function fmtAmount(a: string): string {
+  const n = Number(a);
+  if (!Number.isFinite(n)) return a;
+  return n.toLocaleString("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default async function FacturacionPage() {
   const ctx = await getPortalDb();
   // Solo el rol "Facturación" (can_manage_company) accede a esta vista.
@@ -221,7 +231,7 @@ export default async function FacturacionPage() {
                     )}
                   </td>
                   <td className="text-foreground px-[18px] py-4 align-middle font-mono text-sm font-semibold whitespace-nowrap">
-                    {inv.amount}
+                    {fmtAmount(inv.amount)}
                     {inv.currency ? ` ${inv.currency}` : ""}
                   </td>
                   <td className="px-[18px] py-4 text-right align-middle">

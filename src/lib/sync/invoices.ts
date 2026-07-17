@@ -36,6 +36,38 @@ async function queryAll(notion: any, database_id: string, filter: any) {
 }
 
 /**
+ * Resuelve el nombre (título) de cada Producto por su id de página, cacheado.
+ * En [AKF] - Facturas no hay descripción propia: el concepto legible para el
+ * cliente es el nombre del Producto facturado (p.ej. "Tempo Pro v2").
+ */
+async function resolveProductNames(
+  notion: any,
+  ids: string[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  for (const id of [...new Set(ids)]) {
+    try {
+      const page: any = await notion.pages.retrieve({ page_id: id });
+      const props = page.properties ?? {};
+      const titleProp = Object.values(props).find(
+        (v: any) => v?.type === "title",
+      );
+      const name = plainText(titleProp);
+      if (name) map.set(id, name);
+    } catch (e) {
+      console.error(`[sync:invoices] producto ${id}`, e);
+    }
+  }
+  return map;
+}
+
+/** Redondea a 2 decimales y devuelve string plano ("1159.55"). */
+function money(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "0";
+  return (Math.round(n * 100) / 100).toFixed(2);
+}
+
+/**
  * Sincroniza las facturas EMITIDAS de [AKF] - Facturas hacia public.invoices,
  * agrupadas por "Empresa Externa" — solo para empresas que están en el portal.
  * NO sincroniza Activos Kairos (AK_COMPANY_NOTION_ID). El PDF ("Factura") se
@@ -70,6 +102,12 @@ export async function syncInvoices() {
     ],
   });
 
+  // Nombres de Producto (concepto legible) para las facturas del portal.
+  const productIds = rows
+    .map((r) => r.properties?.["Producto"]?.relation?.[0]?.id as string | undefined)
+    .filter((id): id is string => !!id);
+  const productNames = await resolveProductNames(notion, productIds);
+
   // Agrupa por empresa (interna). Excluye AK y empresas fuera del portal.
   const byCompany = new Map<string, any[]>();
   for (const page of rows) {
@@ -81,14 +119,17 @@ export async function syncInvoices() {
     const companyId = byNotion.get(norm);
     if (!companyId) continue;
 
-    const amount = p["Cantidad"]?.number;
+    // En Notion el código de factura vive en "Concepto" (no hay "Nº Factura").
+    const codigo = plainText(p["Concepto"]);
+    const productId = p["Producto"]?.relation?.[0]?.id as string | undefined;
+    const concepto = (productId && productNames.get(productId)) || "Suscripción";
     const pdfUrl = await rehostPdf(admin, page);
     const inv = {
       notion_id: page.id as string,
       company_id: companyId,
-      number: plainText(p["Nº Factura"]) ?? null,
-      concept: plainText(p["Concepto"]) ?? "(sin concepto)",
-      amount: amount != null ? String(amount) : "0",
+      number: codigo,
+      concept: concepto,
+      amount: money(p["Cantidad"]?.number),
       currency: formulaValue(p["Divisa Símbolo"]) ?? "€",
       status: STATUS_MAP[statusName(p["Estado"]) ?? ""] ?? "pendiente",
       issued_at: dateStart(p["Emisión"]),

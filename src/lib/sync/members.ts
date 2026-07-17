@@ -21,6 +21,26 @@ async function queryAll(notion: any, database_id: string, filter: any) {
   return out;
 }
 
+/**
+ * Aprovisiona el usuario en Supabase Auth (sin contraseña, email ya confirmado)
+ * para que pueda pedir el código OTP. El login usa `shouldCreateUser:false`, así
+ * que sin esta fila en auth.users el cliente nunca recibiría el código. El trigger
+ * `on_auth_user_created` enlaza portal_users.auth_user_id por email. Idempotente:
+ * un email ya registrado se ignora. No envía ningún correo al cliente.
+ */
+async function ensureAuthUser(admin: any, email: string): Promise<boolean> {
+  const { error } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+  });
+  if (!error) return true;
+  const msg = `${error.message ?? ""} ${error.code ?? ""}`.toLowerCase();
+  if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+    return false; // ya existía
+  }
+  throw error;
+}
+
 function slugify(s: string) {
   return (
     s
@@ -121,6 +141,7 @@ export async function syncPortalMembers({
   let created = 0;
   let updated = 0;
   let skipped = 0;
+  let provisioned = 0;
   for (const m of plan) {
     // Asegura la fila de empresa.
     const { data: comp } = await admin
@@ -180,6 +201,9 @@ export async function syncPortalMembers({
       if (ins.error) throw ins.error;
       created++;
     }
+
+    // Aprovisiona Auth para que el cliente pueda recibir el código OTP.
+    if (await ensureAuthUser(admin, m.email)) provisioned++;
   }
   return {
     applied: true,
@@ -188,5 +212,6 @@ export async function syncPortalMembers({
     created,
     updated,
     skipped,
+    provisioned,
   };
 }

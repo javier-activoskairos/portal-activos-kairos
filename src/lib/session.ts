@@ -106,7 +106,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
         // Usuario representativo de la empresa: impersonación completa.
         const { data: reps } = await admin
           .from("portal_users")
-          .select("id, email, contact_notion_id, first_name, last_name, avatar_url")
+          .select("id, email, contact_notion_id, first_name, last_name, avatar_url, can_manage_company")
           .eq("company_id", tgt.id)
           .eq("active", true)
           .neq("role", "admin");
@@ -126,6 +126,10 @@ export async function getPortalSession(): Promise<PortalSession | null> {
         const displayName = best
           ? [best.first_name, best.last_name].filter(Boolean).join(" ") || null
           : null;
+
+        // Impersonación completa: el acceso a Facturación pasa a ser el del
+        // usuario representado, NO el del admin (que siempre lo tiene).
+        session.canManageCompany = best?.can_manage_company ?? false;
 
         session.viewingAs = {
           companyId: tgt.id,

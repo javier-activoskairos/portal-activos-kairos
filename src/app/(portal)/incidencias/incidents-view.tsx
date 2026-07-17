@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ReopenIncidentModal } from "@/components/reopen-incident-modal";
 import { VerifyIncidentModal } from "@/components/verify-incident-modal";
-import { formatDate, incidentBadge, labelBadge } from "@/lib/status";
+import { formatDate, incidentBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
 export interface IncidentRow {
@@ -63,7 +63,6 @@ function IncidentDetail({
   onVerify: () => void;
 }) {
   const badge = incidentBadge(incident.status);
-  const label = labelBadge(incident.label);
   const attachments = incident.attachments ?? [];
   const verify = isVerify(incident);
   const canReopen = verify || isResolved(incident);
@@ -115,10 +114,10 @@ function IncidentDetail({
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
-              Fecha de creación
+              Estado
             </div>
             <div className="text-foreground text-[15px] font-semibold">
-              {formatDate(incident.created_at)}
+              {incident.status}
             </div>
           </div>
           <div>
@@ -131,13 +130,11 @@ function IncidentDetail({
           </div>
           <div>
             <div className="text-muted-foreground mb-2 text-[11.5px] font-semibold tracking-[0.08em] uppercase">
-              Etiqueta
+              Fecha de creación
             </div>
-            {incident.label ? (
-              <StatusBadge label={incident.label} spec={label} />
-            ) : (
-              <span className="text-muted-foreground text-[15px]">—</span>
-            )}
+            <div className="text-foreground text-[15px] font-semibold">
+              {formatDate(incident.created_at)}
+            </div>
           </div>
         </div>
       </div>

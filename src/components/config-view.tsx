@@ -337,7 +337,8 @@ export function ConfigView({
         </div>
       </section>
 
-      {/* ---------- EMPRESA ---------- */}
+      {/* ---------- EMPRESA (solo rol Facturación) ---------- */}
+      {canManageCompany && (
       <section className="border-border bg-card rounded-[22px] border p-6 shadow-[var(--shadow-sm)] sm:p-7">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-foreground text-[17px] font-bold tracking-tight">
@@ -351,14 +352,6 @@ export function ConfigView({
           Datos fiscales que aparecen en tus facturas. Solo editables por
           personas con acceso a Facturación.
         </p>
-
-        {!canManageCompany && (
-          <div className="border-border bg-muted text-muted-foreground mt-4 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13px]">
-            <IconLock width={14} height={14} />
-            No tienes acceso de Facturación. Puedes ver los datos pero no
-            editarlos.
-          </div>
-        )}
 
         <div className="mt-5 grid gap-4">
           <Field label="Nombre fiscal">
@@ -434,6 +427,7 @@ export function ConfigView({
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }

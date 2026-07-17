@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   }
   const { session, db, companyId } = ctx;
 
-  let body: { incidentId?: string; valoracion?: number };
+  let body: { incidentId?: string; valoracion?: number; mejora?: string };
   try {
     body = await request.json();
   } catch {
@@ -29,6 +29,9 @@ export async function POST(request: Request) {
   }
   const incidentId = String(body.incidentId ?? "").trim();
   const valoracion = Math.max(1, Math.min(5, Math.round(Number(body.valoracion) || 0)));
+  // Solo se guarda cuando la valoración es baja (≤ 3); se recorta por seguridad.
+  const mejora =
+    valoracion <= 3 ? String(body.mejora ?? "").trim().slice(0, 1900) : "";
   if (!incidentId || valoracion < 1) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   }
@@ -66,6 +69,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         incidenciaNotionId: incident.notion_id,
         valoracion,
+        mejora,
         correo: session.email,
       }),
     });

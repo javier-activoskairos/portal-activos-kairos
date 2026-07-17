@@ -18,6 +18,7 @@ export function VerifyIncidentModal({
 }) {
   const [stars, setStars] = useState(0);
   const [hover, setHover] = useState(0);
+  const [mejora, setMejora] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -28,6 +29,7 @@ export function VerifyIncidentModal({
     if (!open) {
       setStars(0);
       setHover(0);
+      setMejora("");
       setLoading(false);
       setError(null);
       setSent(false);
@@ -53,7 +55,11 @@ export function VerifyIncidentModal({
       const res = await fetch("/api/incidencias/verificar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ incidentId, valoracion: stars }),
+        body: JSON.stringify({
+          incidentId,
+          valoracion: stars,
+          mejora: stars <= 3 ? mejora.trim() : "",
+        }),
       });
       if (!res.ok) throw new Error("request failed");
       setSent(true);
@@ -161,6 +167,26 @@ export function VerifyIncidentModal({
             <div className="text-muted-foreground mt-2 text-center text-[12.5px]">
               {shown > 0 ? `${shown} / 5` : "Selecciona una puntuación"}
             </div>
+
+            {stars >= 1 && stars <= 3 && (
+              <div className="animate-in fade-in-0 slide-in-from-top-1 mt-5 duration-200">
+                <label
+                  htmlFor="mejora"
+                  className="text-foreground mb-1.5 block text-sm font-semibold"
+                >
+                  ¿Qué podemos mejorar?
+                </label>
+                <textarea
+                  id="mejora"
+                  value={mejora}
+                  onChange={(e) => setMejora(e.target.value)}
+                  rows={3}
+                  maxLength={1900}
+                  placeholder="Cuéntanos qué no salió como esperabas…"
+                  className="border-border bg-card text-foreground placeholder:text-muted-foreground/60 focus:border-brand w-full resize-none rounded-[13px] border p-3 text-[14px] leading-relaxed outline-none transition-colors"
+                />
+              </div>
+            )}
 
             {error && (
               <p className="text-danger-foreground mt-4 text-center text-[13px]">

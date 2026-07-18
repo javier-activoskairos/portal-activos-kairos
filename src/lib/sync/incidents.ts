@@ -41,6 +41,7 @@ function mapIncident(page: any, companyId: string) {
     response_url: urlValue(p["URL Respuesta"]),
     notion_url: page.url,
     last_edited_at: page.last_edited_time,
+    synced_at: new Date().toISOString(),
   };
 }
 

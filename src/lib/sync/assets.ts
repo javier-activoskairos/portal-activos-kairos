@@ -49,6 +49,7 @@ function mapAsset(page: any, companyId: string) {
     asset_url: urlValue(p["URL"]), // ← propiedad "URL" de Notion (decisión de Javier)
     notion_url: page.url,
     last_edited_at: page.last_edited_time,
+    synced_at: new Date().toISOString(),
     tasks: [] as Task[], // se rellena con fetchTasksByAsset
   };
 }

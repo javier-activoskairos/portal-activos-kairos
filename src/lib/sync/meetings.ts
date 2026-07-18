@@ -53,6 +53,7 @@ export async function syncMeetings() {
         duration_min: p["Duración"]?.number ?? null,
         meeting_date: dateStart(p["Fecha"]),
         last_edited_at: page.last_edited_time,
+        synced_at: new Date().toISOString(),
       };
     });
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { IconArrow, IconMail, IconLock } from "@/components/icons";
+import { IconArrow, IconMail, IconLock, IconClock } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
 
 type Step = "email" | "code";
@@ -118,9 +118,20 @@ export function LoginForm() {
           <h1 className="text-foreground text-[28px] leading-tight font-extrabold tracking-tight">
             Revisa tu correo.
           </h1>
-          <p className="text-muted-foreground mt-2 mb-6 text-[15px] leading-relaxed">
+          <p className="text-muted-foreground mt-2 mb-4 text-[15px] leading-relaxed">
             Enviamos un código de 7 dígitos a{" "}
             <span className="text-foreground font-medium">{email}</span>.
+          </p>
+          <p className="border-border bg-muted/60 text-muted-foreground mb-6 flex items-start gap-2 rounded-xl border px-3 py-2.5 text-[13px] leading-relaxed">
+            <IconClock
+              width={15}
+              height={15}
+              className="text-brand-accent mt-px shrink-0"
+            />
+            <span>
+              El código <span className="text-foreground font-semibold">caduca en 5 minutos</span>.
+              Si expira, pide uno nuevo.
+            </span>
           </p>
 
           <label

@@ -53,6 +53,7 @@ export default async function PortalLayout({
         logoUrl={session.logoUrl}
         isAdmin={session.role === "admin"}
         canBilling={session.canManageCompany}
+        custodianUserIds={session.custodianUserIds}
         openIncidents={openIncidents ?? 0}
       />
       <main className="transition-[margin] duration-200 min-[900px]:ml-[var(--kp-sidebar-w,244px)]">

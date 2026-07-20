@@ -360,7 +360,7 @@ export default async function InicioPage() {
                 <img
                   src={session.logoUrl}
                   alt={session.companyName}
-                  className="border-border bg-card size-[42px] shrink-0 rounded-xl border object-contain p-1"
+                  className="border-border bg-card h-[42px] w-auto max-w-[150px] shrink-0 rounded-xl border object-contain px-1.5 py-1"
                 />
               ) : (
                 <span className="bg-accent text-brand-accent flex size-[42px] shrink-0 items-center justify-center rounded-xl">

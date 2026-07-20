@@ -3,6 +3,7 @@
     "slug": "javier",
     "name": "Javier",
     "color": "#F96302",
+    "userId": "39d82524-00d6-4f5a-b568-d7bd0b53a758",
     "image": "/consultants/javier.webp",
     "meetings": {
       "astrapi": "https://calendar.notion.so/meet/javierkairos/astrapi-javier",
@@ -14,6 +15,7 @@
     "slug": "alvaro",
     "name": "Álvaro",
     "color": "#E8BE00",
+    "userId": "bb75a68c-e42b-496f-b2f5-b51ad179255a",
     "image": "/consultants/alvaro.webp",
     "meetings": {
       "astrapi": "https://calendar.notion.so/meet/lvaroguillsansano/astrapi-alvaro",
@@ -24,6 +26,7 @@
     "slug": "fran",
     "name": "Fran",
     "color": "#3A90DB",
+    "userId": "e5bae3d7-4203-4c72-a8fa-6f4cebd53354",
     "image": "/consultants/fran.webp",
     "meetings": {
       "astrapi": "https://calendar.notion.so/meet/fran-fzwa3he/fran-astrapi",

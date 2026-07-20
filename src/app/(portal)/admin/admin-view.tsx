@@ -520,7 +520,7 @@ export function AdminView({
                           <img
                             src={c.logoUrl}
                             alt={c.companyName}
-                            className="border-border bg-card size-10 shrink-0 rounded-full border object-contain p-1"
+                            className="border-border bg-card h-10 w-auto max-w-[124px] shrink-0 rounded-xl border object-contain px-1.5 py-1"
                           />
                         ) : (
                           <span className="bg-accent text-brand-accent flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-bold">
@@ -559,7 +559,7 @@ export function AdminView({
                         <img
                           src={pickedCompany.logoUrl}
                           alt={pickedCompany.companyName}
-                          className="border-border bg-card size-9 shrink-0 rounded-full border object-contain p-1"
+                          className="border-border bg-card h-9 w-auto max-w-[112px] shrink-0 rounded-xl border object-contain px-1.5 py-1"
                         />
                       ) : (
                         <span className="bg-accent text-brand-accent flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold">

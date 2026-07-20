@@ -73,7 +73,18 @@ for (const p of data.results) {
     }
   }
 
-  out.push({ slug, name, color, image: `/consultants/${slug}.webp`, meetings });
+  // Id del usuario de Notion (propiedad "Usuario" de [AKE] - Equipo). Permite
+  // cotejar con "Custodio Kairos" de la empresa y mostrar solo sus consultores.
+  const userId = (pr["Usuario"]?.people || [])[0]?.id ?? null;
+
+  out.push({
+    slug,
+    name,
+    color,
+    userId,
+    image: `/consultants/${slug}.webp`,
+    meetings,
+  });
 }
 
 // Javier (admin) primero.

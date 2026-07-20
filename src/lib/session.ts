@@ -18,6 +18,9 @@ export interface PortalSession {
   planStreakWeeks: number;
   /** Notion ID del Contacto del usuario (para "Creado por" en incidencias). */
   contactNotionId: string | null;
+  /** Custodios Kairos de la empresa (ids de usuario de Notion). Filtran qué
+   * consultores se ofrecen al agendar una reunión. */
+  custodianUserIds: string[];
   /** Rol "Facturación": puede cambiar la configuración de su empresa. */
   canManageCompany: boolean;
   role: "client" | "admin";
@@ -64,7 +67,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
 
   const { data: company } = await supabase
     .from("companies")
-    .select("name, logo_url, plan, sector, plan_streak_weeks")
+    .select("name, logo_url, plan, sector, plan_streak_weeks, custodian_user_ids")
     .eq("id", pu.company_id)
     .maybeSingle();
 
@@ -77,6 +80,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
     plan: company?.plan ?? null,
     sector: company?.sector ?? null,
     planStreakWeeks: company?.plan_streak_weeks ?? 0,
+    custodianUserIds: company?.custodian_user_ids ?? [],
     contactNotionId: pu.contact_notion_id ?? null,
     canManageCompany: pu.can_manage_company ?? false,
     role: pu.role as "client" | "admin",
@@ -92,7 +96,9 @@ export async function getPortalSession(): Promise<PortalSession | null> {
       const admin = createAdminClient();
       const { data: tgt } = await admin
         .from("companies")
-        .select("id, name, logo_url, plan, sector, plan_streak_weeks")
+        .select(
+          "id, name, logo_url, plan, sector, plan_streak_weeks, custodian_user_ids",
+        )
         .eq("id", target)
         .maybeSingle();
       if (tgt) {
@@ -102,6 +108,7 @@ export async function getPortalSession(): Promise<PortalSession | null> {
         session.plan = tgt.plan ?? null;
         session.sector = tgt.sector ?? null;
         session.planStreakWeeks = tgt.plan_streak_weeks ?? 0;
+        session.custodianUserIds = tgt.custodian_user_ids ?? [];
 
         // Usuario representativo de la empresa: impersonación completa.
         const { data: reps } = await admin

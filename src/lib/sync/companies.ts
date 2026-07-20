@@ -268,12 +268,26 @@ export async function syncCompanies() {
 
       // La racha NO se calcula aquí: viene de la membresía ("Inicio Tempo"),
       // la fija syncMemberships.
-      const patch: Record<string, string | boolean | number | null> = {
+      // Custodios Kairos de la empresa (ids de usuario de Notion). Filtran qué
+      // consultores se ofrecen en el modal de reuniones.
+      const custodios = (
+        props?.["Custodios Kairos"]?.people ??
+        props?.["Custodio Kairos"]?.people ??
+        []
+      )
+        .map((u: any) => u?.id)
+        .filter(Boolean);
+
+      const patch: Record<
+        string,
+        string | boolean | number | null | string[]
+      > = {
         plan: derivePlan(props),
         sector: props?.["Sector"]?.select?.name ?? null,
         estado,
         // Es o ha sido cliente: Estado Cliente, o con membresía, o Es Tempo.
         is_client: estado === "Cliente" || esTempo || tieneMembresia,
+        custodian_user_ids: custodios,
       };
 
       // Logo (opcional): descargar y re-hospedar si existe.

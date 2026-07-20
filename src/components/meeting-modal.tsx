@@ -13,6 +13,8 @@ interface Consultant {
   name: string;
   color: string;
   image: string;
+  /** Id de usuario de Notion (de [AKE] - Equipo) para cotejar con Custodio Kairos. */
+  userId?: string | null;
   meetings: Partial<Record<MeetingKey, string>>;
 }
 
@@ -77,9 +79,12 @@ function ConsultantAvatar({ consultant }: { consultant: Consultant }) {
 export function MeetingModal({
   open,
   onClose,
+  custodianUserIds = [],
 }: {
   open: boolean;
   onClose: () => void;
+  /** Custodios Kairos de la empresa (ids de usuario de Notion). */
+  custodianUserIds?: string[];
 }) {
   const [tipo, setTipo] = useState<MeetingType | null>(null);
 
@@ -105,8 +110,16 @@ export function MeetingModal({
 
   if (!open) return null;
 
+  // Solo los Custodios Kairos de la empresa (cotejando el usuario de Notion de
+  // [AKE] - Equipo con "Custodio Kairos" de [AK] - Empresas). Si la empresa no
+  // tiene custodios resueltos, se muestran todos para no dejar la lista vacía.
+  const custodios = CONSULTANTS.filter(
+    (c) => c.userId && custodianUserIds.includes(c.userId),
+  );
+  const elegibles = custodios.length > 0 ? custodios : CONSULTANTS;
+
   const consultores = tipo
-    ? CONSULTANTS.filter((c) => c.meetings[tipo.key])
+    ? elegibles.filter((c) => c.meetings[tipo.key])
     : [];
 
   return (

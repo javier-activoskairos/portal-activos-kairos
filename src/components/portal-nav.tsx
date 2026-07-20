@@ -80,6 +80,7 @@ export function PortalNav({
   openIncidents = 0,
   displayName = null,
   avatarUrl = null,
+  custodianUserIds = [],
 }: {
   email: string;
   companyName: string;
@@ -89,6 +90,7 @@ export function PortalNav({
   openIncidents?: number;
   displayName?: string | null;
   avatarUrl?: string | null;
+  custodianUserIds?: string[];
 }) {
   // "Facturación" solo para el rol Facturación.
   const navItems = NAV_ITEMS.filter(
@@ -336,7 +338,10 @@ export function PortalNav({
                   src={logoUrl}
                   alt={companyName}
                   title={collapsed ? companyName : undefined}
-                  className="border-border bg-card size-[26px] shrink-0 rounded-lg border object-contain p-0.5"
+                  className={cn(
+                    "border-border bg-card h-[26px] w-auto shrink-0 rounded-lg border object-contain p-0.5",
+                    collapsed ? "max-w-[26px]" : "max-w-[104px]",
+                  )}
                 />
               ) : (
                 <span
@@ -507,7 +512,11 @@ export function PortalNav({
         </div>
       </header>
 
-      <MeetingModal open={meetingOpen} onClose={() => setMeetingOpen(false)} />
+      <MeetingModal
+        open={meetingOpen}
+        onClose={() => setMeetingOpen(false)}
+        custodianUserIds={custodianUserIds}
+      />
       <IncidentModal
         open={incidentOpen}
         onClose={() => setIncidentOpen(false)}

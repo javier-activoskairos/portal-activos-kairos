@@ -2,6 +2,8 @@ name: Deploy a Render (push → main)
 
 # Dispara un deploy en Render en cada push a main. Sustituye al webhook nativo
 # GitHub → Render (ausente en este repo), que dejaba autoDeploy sin efecto.
+# Tolera que ya exista un deploy para el mismo commit (lanzado a mano o por un
+# push casi simultáneo): en ese caso no duplica y termina OK.
 on:
   push:
     branches: [main]
@@ -20,61 +22,48 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: srv-d98i8s3eo5us73dikcn0
+          SHA: ${{ github.sha }}
         run: |
           set -uo pipefail
-          api="https://api.render.com/v1/services/${RENDER_SERVICE_ID}"
+          API="https://api.render.com/v1/services/${RENDER_SERVICE_ID}"
 
-          # ¿Ya hay un deploy en curso para este commit? (p. ej. lanzado a mano
-          # o por un push casi simultáneo). Si lo hay, no duplicamos.
-          en_curso() {
-            curl -sS "${api}/deploys?limit=5" \
+          # Id del deploy vivo para este commit, si lo hay.
+          deploy_vivo() {
+            curl -sS "${API}/deploys?limit=5" \
               -H "Authorization: Bearer ${RENDER_API_KEY}" \
-              | python3 -c "
-import sys, json
-sha = '${GITHUB_SHA}'
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    sys.exit(0)
-vivos = {'queued', 'build_in_progress', 'update_in_progress', 'live'}
-for it in data:
-    d = it.get('deploy', it)
-    if d.get('status') in vivos and (d.get('commit') or {}).get('id') == sha:
-        print(d.get('id', ''))
-        break
-"
+            | jq -r --arg sha "${SHA}" '
+                [ .[]
+                  | (.deploy // .)
+                  | select(.commit.id == $sha)
+                  | select(.status | IN("queued","build_in_progress","update_in_progress","live"))
+                  | .id
+                ] | first // ""
+              ' 2>/dev/null
           }
 
-          ya=$(en_curso || true)
+          ya="$(deploy_vivo)"
           if [ -n "${ya}" ]; then
-            echo "Ya hay un deploy para ${GITHUB_SHA} (${ya}); no se duplica."
+            echo "Ya existe un deploy para ${SHA} (${ya}); no se duplica."
             exit 0
           fi
 
-          # Hasta 3 intentos: Render puede devolver cuerpo vacío si otro deploy
-          # acaba de entrar.
           for intento in 1 2 3; do
-            body=$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST \
-              "${api}/deploys" \
+            code="$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST \
+              "${API}/deploys" \
               -H "Authorization: Bearer ${RENDER_API_KEY}" \
               -H "Content-Type: application/json" \
-              -d '{"clearCache":"do_not_clear"}')
-            echo "intento ${intento} → HTTP ${body}"
-            cat /tmp/resp.json || true; echo
+              -d '{"clearCache":"do_not_clear"}')"
+            echo "intento ${intento} → HTTP ${code}"
+            cat /tmp/resp.json 2>/dev/null || true
+            echo
 
-            id=$(python3 -c "
-import json
-try:
-    print(json.load(open('/tmp/resp.json')).get('id', ''))
-except Exception:
-    print('')
-")
+            id="$(jq -r '.id // ""' /tmp/resp.json 2>/dev/null || echo "")"
             if [ -n "${id}" ]; then
               echo "Deploy lanzado: ${id}"
               exit 0
             fi
 
-            ya=$(en_curso || true)
+            ya="$(deploy_vivo)"
             if [ -n "${ya}" ]; then
               echo "Deploy ya en curso (${ya}); damos por bueno."
               exit 0

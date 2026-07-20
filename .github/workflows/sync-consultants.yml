@@ -3,9 +3,9 @@ name: Sync Consultores (Equipo → Portal)
 # Copia diaria de los consultores (enlaces de agenda Notion Calendar + foto)
 # desde [AKE] - Equipo hacia el portal, para el botón "Agendar Reunión".
 # Descarga/redimensiona las fotos y regenera src/data/consultants.json.
+# Reloj: n8n (workflow "Portal - Reloj de Sincronizaciones") lo lanza vía
+# workflow_dispatch. Aquí ya no hay cron propio.
 on:
-  schedule:
-    - cron: "0 4 * * *" # diario 04:00 UTC
   workflow_dispatch: {}
 
 permissions:

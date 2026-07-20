@@ -2,9 +2,9 @@ name: Sync Activos (Notion → Supabase)
 
 # Reconciliación nocturna de [AKC] - Activos Kairos visibles de la empresa
 # Activos Kairos hacia la réplica Supabase. Notion sigue siendo la fuente de verdad.
+# Reloj: n8n (workflow "Portal - Reloj de Sincronizaciones") lo lanza vía
+# workflow_dispatch. Aquí ya no hay cron propio.
 on:
-  schedule:
-    - cron: "0 3 * * *"
   workflow_dispatch: {}
 
 concurrency:

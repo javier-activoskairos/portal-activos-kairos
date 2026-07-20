@@ -2,9 +2,9 @@ name: Sync Facturas (Notion → Supabase)
 
 # Facturas emitidas de [AKF] - Facturas hacia public.invoices, por empresa
 # externa del portal (excluye Activos Kairos). Re-hospeda el PDF.
+# Reloj: n8n (workflow "Portal - Reloj de Sincronizaciones") lo lanza vía
+# workflow_dispatch. Aquí ya no hay cron propio.
 on:
-  schedule:
-    - cron: "45 3 * * *"
   workflow_dispatch: {}
 
 concurrency:

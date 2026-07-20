@@ -2,9 +2,9 @@ name: Sync Logos Empresa (Notion → Supabase Storage)
 
 # Descarga el logo de cada empresa desde [AK] - Empresas y lo re-hospeda en
 # Supabase Storage (bucket company-logos). Notion sigue siendo la fuente.
+# Reloj: n8n (workflow "Portal - Reloj de Sincronizaciones") lo lanza vía
+# workflow_dispatch. Aquí ya no hay cron propio.
 on:
-  schedule:
-    - cron: "30 3 * * *"
   workflow_dispatch: {}
 
 concurrency:

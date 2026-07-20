@@ -3,9 +3,9 @@ name: Sync Miembros (Notion → Portal + Auth)
 # Provisiona portal_users desde Notion (contactos Activo con rol Avans o
 # Facturación en empresas con membresía) y crea su usuario en Supabase Auth
 # para que puedan pedir el código OTP. Idempotente. Notion es la fuente de verdad.
+# Reloj: n8n (workflow "Portal - Reloj de Sincronizaciones") lo lanza vía
+# workflow_dispatch. Aquí ya no hay cron propio.
 on:
-  schedule:
-    - cron: "*/30 * * * *"
   workflow_dispatch: {}
 
 concurrency:

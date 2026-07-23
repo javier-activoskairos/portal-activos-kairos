@@ -1,10 +1,63 @@
 import { Client } from "@notionhq/client";
 
+// Firma del fetch que acepta el SDK de Notion (ClientOptions["fetch"]).
+type FetchNotion = (
+  url: string,
+  init?: {
+    agent?: unknown;
+    body?: string;
+    headers?: Record<string, string>;
+    method?: string;
+  },
+) => Promise<{
+  ok: boolean;
+  text: () => Promise<string>;
+  headers: unknown;
+  status: number;
+}>;
+
+// Códigos que indican un fallo transitorio del borde de Notion (Cloudflare) o
+// un rate limit: se reintentan. El resto de errores se propagan tal cual.
+const REINTENTABLES = new Set([429, 500, 502, 503, 504]);
+const MAX_INTENTOS = 5;
+const ESPERA_BASE_MS = 500;
+
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// fetch con backoff exponencial. Sin esto, un 502 Bad Gateway puntual de la API
+// de Notion aborta el sync completo (incidencia sync-assets del 22/07/2026).
+export const fetchConReintento: FetchNotion = async (url, init) => {
+  // `agent` es propio del SDK y no lo acepta el fetch global de Node.
+  const { agent: _agent, ...rest } = init ?? {};
+  let ultimoError: unknown = null;
+
+  for (let intento = 1; intento <= MAX_INTENTOS; intento++) {
+    try {
+      const res = await fetch(url, rest as RequestInit);
+      if (!REINTENTABLES.has(res.status) || intento === MAX_INTENTOS)
+        return res;
+      console.warn(
+        `[notion] ${res.status} en ${url} - reintento ${intento}/${MAX_INTENTOS - 1}`,
+      );
+    } catch (err) {
+      // Fallo de red (ECONNRESET, timeout DNS...). Mismo tratamiento.
+      ultimoError = err;
+      if (intento === MAX_INTENTOS) throw err;
+      console.warn(
+        `[notion] error de red en ${url} - reintento ${intento}/${MAX_INTENTOS - 1}`,
+      );
+    }
+    await espera(ESPERA_BASE_MS * 2 ** (intento - 1));
+  }
+
+  throw ultimoError ?? new Error("Notion: reintentos agotados");
+};
+
 // Cliente Notion (solo servidor / cron). Token de lectura sobre Activos + Incidencias.
 export function notionClient() {
   const auth = process.env.NOTION_TOKEN;
   if (!auth) throw new Error("Falta NOTION_TOKEN");
-  return new Client({ auth });
+  return new Client({ auth, fetch: fetchConReintento });
 }
 
 // ---------------------------------------------------------------------------
@@ -20,7 +73,10 @@ export function plainText(prop: any): string | null {
         ? prop.rich_text
         : null;
   if (!arr || arr.length === 0) return null;
-  const text = arr.map((t: any) => t.plain_text).join("").trim();
+  const text = arr
+    .map((t: any) => t.plain_text)
+    .join("")
+    .trim();
   return text || null;
 }
 

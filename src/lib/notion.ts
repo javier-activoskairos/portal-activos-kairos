@@ -57,7 +57,11 @@ export const fetchConReintento: FetchNotion = async (url, init) => {
 export function notionClient() {
   const auth = process.env.NOTION_TOKEN;
   if (!auth) throw new Error("Falta NOTION_TOKEN");
-  return new Client({ auth, fetch: fetchConReintento });
+  // timeoutMs 120s: el SDK de Notion aborta cada request a 60s por defecto,
+  // POR FUERA de fetchConReintento, así que ese wrapper (5xx/red) no lo cubre.
+  // Un query lento pero recuperable lanzaba `notionhq_client_request_timeout`
+  // y tumbaba el sync (incidencias GitHub Actions 23-25/07/2026).
+  return new Client({ auth, fetch: fetchConReintento, timeoutMs: 120000 });
 }
 
 // ---------------------------------------------------------------------------

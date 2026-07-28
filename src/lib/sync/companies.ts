@@ -90,9 +90,35 @@ export async function syncMemberships() {
   if (error) throw error;
 
   let updated = 0;
+  let cleared = 0;
   for (const c of companies ?? []) {
     const b = c.notion_id ? byEmpresa.get(normalizeId(c.notion_id)!) : undefined;
-    if (!b) continue;
+
+    // Sin membresía activa hay que LIMPIAR, no saltar: si no, un cliente dado
+    // de baja seguiría viendo "Tu suscripción actual: 490 € al mes · próximo
+    // cargo el…" indefinidamente. Solo se tocan los campos que provienen de la
+    // membresía; el método de pago se conserva.
+    if (!b) {
+      const clr = await admin
+        .from("company_billing")
+        .update({
+          amount: null,
+          cycle: null,
+          next_charge_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("company_id", c.id);
+      if (clr.error) {
+        console.error(`[sync:memberships] limpiar ${c.id}`, clr.error.message);
+      } else {
+        cleared++;
+      }
+      await admin
+        .from("companies")
+        .update({ plan_streak_weeks: 0 })
+        .eq("id", c.id);
+      continue;
+    }
 
     // Racha de la membresía (semanas desde Inicio Tempo).
     const upC = await admin
@@ -118,7 +144,12 @@ export async function syncMemberships() {
     }
     updated++;
   }
-  return { status: "success" as const, memberships: memberships.length, updated };
+  return {
+    status: "success" as const,
+    memberships: memberships.length,
+    updated,
+    cleared,
+  };
 }
 
 /**
@@ -256,6 +287,7 @@ export async function syncCompanies() {
 
   let updated = 0;
   const total = companies?.length ?? 0;
+  const failures: string[] = [];
 
   for (const c of companies ?? []) {
     try {
@@ -291,29 +323,39 @@ export async function syncCompanies() {
       };
 
       // Logo (opcional): descargar y re-hospedar si existe.
-      const files = props?.["Logo"]?.files ?? [];
-      const f = files[0];
-      const url: string | undefined = f?.file?.url ?? f?.external?.url;
-      if (url) {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`descarga logo ${res.status}`);
-        const buf = Buffer.from(await res.arrayBuffer());
-        const contentType = res.headers.get("content-type") || "image/png";
-        const ext = contentType.includes("svg")
-          ? "svg"
-          : contentType.includes("jpeg") || contentType.includes("jpg")
-            ? "jpg"
-            : contentType.includes("webp")
-              ? "webp"
-              : "png";
-        const path = `${c.notion_id}.${ext}`;
-        const up = await admin.storage
-          .from(BUCKET)
-          .upload(path, buf, { contentType, upsert: true });
-        if (up.error) throw up.error;
-        const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
-        const version = Date.parse(page.last_edited_time) || 0;
-        patch.logo_url = `${pub.publicUrl}?v=${version}`;
+      //
+      // En su propio try/catch a propósito. La URL de Notion es firmada y
+      // caduca: un 403 transitorio aquí NO debe impedir que se guarden plan,
+      // sector, estado y custodios (estos últimos filtran qué consultores se
+      // ofrecen en el modal de reuniones). Si falla, se conserva el logo previo.
+      try {
+        const files = props?.["Logo"]?.files ?? [];
+        const f = files[0];
+        const url: string | undefined = f?.file?.url ?? f?.external?.url;
+        if (url) {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`descarga logo ${res.status}`);
+          const buf = Buffer.from(await res.arrayBuffer());
+          const contentType = res.headers.get("content-type") || "image/png";
+          const ext = contentType.includes("svg")
+            ? "svg"
+            : contentType.includes("jpeg") || contentType.includes("jpg")
+              ? "jpg"
+              : contentType.includes("webp")
+                ? "webp"
+                : "png";
+          const path = `${c.notion_id}.${ext}`;
+          const up = await admin.storage
+            .from(BUCKET)
+            .upload(path, buf, { contentType, upsert: true });
+          if (up.error) throw up.error;
+          const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
+          const version = Date.parse(page.last_edited_time) || 0;
+          patch.logo_url = `${pub.publicUrl}?v=${version}`;
+        }
+      } catch (e) {
+        console.error(`[sync:companies] logo ${c.name}`, e);
+        failures.push(`${c.name}: logo`);
       }
 
       const upd = await admin.from("companies").update(patch).eq("id", c.id);
@@ -321,8 +363,19 @@ export async function syncCompanies() {
       updated++;
     } catch (e) {
       console.error(`[sync:companies] ${c.name} (${c.notion_id})`, e);
+      failures.push(`${c.name}: ${(e as Error).message}`);
     }
   }
 
-  return { status: "success" as const, total, updated };
+  // "success" solo si de verdad fue todo bien: devolver éxito con empresas
+  // fallidas hacía que el panel mostrara "Correcto" mientras el plan y los
+  // custodios de un cliente se quedaban obsoletos.
+  return {
+    status: (failures.length > 0 ? "partial" : "success") as
+      | "partial"
+      | "success",
+    total,
+    updated,
+    errors: failures,
+  };
 }

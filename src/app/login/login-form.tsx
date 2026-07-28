@@ -2,16 +2,37 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { IconArrow, IconMail, IconLock, IconClock } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
 
 type Step = "email" | "code";
 
+/**
+ * Destino tras el login. Solo se admiten rutas internas: `next` viene del query
+ * string, así que sin esto un enlace tipo `/login?next=//sitio-externo` sacaría
+ * al usuario del dominio justo después de autenticarse.
+ */
+function safeNext(value: string | null): string {
+  if (!value) return "/inicio";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/inicio";
+  return value;
+}
+
+/** Mensaje de error de una respuesta JSON, con un fallback que sí orienta. */
+async function errorFrom(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    if (body?.error) return String(body.error);
+  } catch {
+    // Respuesta sin cuerpo JSON (502, timeout, HTML de error).
+  }
+  return fallback;
+}
+
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/inicio";
+  const next = safeNext(params.get("next"));
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -19,43 +40,58 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
-
+  // El OTP se envía y se canjea en el servidor (/api/auth/*): así las cookies
+  // de sesión se escriben httpOnly y no quedan expuestas a JavaScript.
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError(null);
-    // shouldCreateUser:false → solo usuarios ya autorizados pueden entrar.
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { shouldCreateUser: false },
-    });
-    setLoading(false);
-    if (error) {
-      setError(
-        "No se pudo enviar el código. Verifica que el correo tenga acceso autorizado.",
-      );
-      return;
+    try {
+      const res = await fetch("/api/auth/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!res.ok) {
+        setError(
+          await errorFrom(
+            res,
+            "No hemos podido enviar el código. Revisa tu conexión e inténtalo de nuevo.",
+          ),
+        );
+        return;
+      }
+      setStep("code");
+    } catch {
+      setError("No hemos podido conectar. Revisa tu conexión e inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
     }
-    setStep("code");
   }
 
   async function verifyCode(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: code.trim(),
-      type: "email",
-    });
-    setLoading(false);
-    if (error) {
-      setError("Código incorrecto o caducado.");
-      return;
+    try {
+      const res = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), code: code.trim() }),
+      });
+      if (!res.ok) {
+        setError(await errorFrom(res, "Código incorrecto o caducado."));
+        return;
+      }
+      router.replace(next);
+      router.refresh();
+    } catch {
+      setError("No hemos podido conectar. Revisa tu conexión e inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
     }
-    router.replace(next);
-    router.refresh();
   }
 
   return (

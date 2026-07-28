@@ -110,7 +110,11 @@
   --secondary: #f1ebe3;
   --secondary-foreground: #1a1714;
   --muted: #f1ebe3;
-  --muted-foreground: #9a8e82;
+  /* Ink cálido desaturado: el token se usa en casi todo el texto de apoyo a
+     11–13px, así que debe superar 4,5:1 (WCAG AA texto normal). Este valor da
+     ~6,1:1 sobre --card y ~5,7:1 sobre --background, manteniendo el tono cálido
+     de la paleta. El anterior (#9a8e82) se quedaba en ~3,2:1. */
+  --muted-foreground: #6b6055;
   --accent: #fbf1e6; /* naranja muy suave para hovers/realces */
   --accent-soft: #fdf3ea;
   --accent-foreground: #1a1714;

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPortalDb } from "@/lib/session";
 import { IconBilling, IconDownload, IconSettings } from "@/components/icons";
+import { DISPLAY_TIME_ZONE } from "@/lib/status";
 
 export const metadata = { title: "Facturación · Portal Activos Kairos" };
 export const dynamic = "force-dynamic";
@@ -23,7 +24,6 @@ interface Invoice {
   currency: string | null;
   status: string;
   issued_at: string | null;
-  pdf_url: string | null;
 }
 
 const INVOICE_STATUS: Record<string, { label: string; cls: string; dot: string }> = {
@@ -55,6 +55,7 @@ function fmtDate(d: string | null): string {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: DISPLAY_TIME_ZONE,
   });
 }
 
@@ -74,18 +75,27 @@ export default async function FacturacionPage() {
   if (!ctx || !ctx.session.canManageCompany) redirect("/inicio");
   const { session, db, companyId } = ctx;
 
-  const [{ data: billingRow }, { data: invoicesData }] = await Promise.all([
-    db
-      .from("company_billing")
-      .select("amount, cycle, next_charge_at, pay_brand, pay_last4, pay_expiry")
-      .eq("company_id", companyId)
-      .maybeSingle(),
-    db
-      .from("invoices")
-      .select("id, number, concept, amount, currency, status, issued_at, pdf_url")
-      .eq("company_id", companyId)
-      .order("issued_at", { ascending: false }),
-  ]);
+  // Nunca se selecciona pdf_path: la descarga va siempre por
+  // /api/facturas/[id]/pdf, que es quien autoriza. Enviar la clave al cliente
+  // volvería a abrir el camino directo a Storage que acabamos de cerrar.
+  const [{ data: billingRow }, { data: invoicesData, error: invErr }] =
+    await Promise.all([
+      db
+        .from("company_billing")
+        .select("amount, cycle, next_charge_at, pay_brand, pay_last4, pay_expiry")
+        .eq("company_id", companyId)
+        .maybeSingle(),
+      db
+        .from("invoices")
+        .select("id, number, concept, amount, currency, status, issued_at")
+        .eq("company_id", companyId)
+        // DESC en Postgres es NULLS FIRST: sin esto las facturas sin fecha de
+        // emisión encabezarían el historial mostrando "—".
+        .order("issued_at", { ascending: false, nullsFirst: false }),
+    ]);
+
+  // Un fallo de consulta no debe disfrazarse de "no tienes facturas".
+  if (invErr) throw new Error(`No se pudo cargar el historial: ${invErr.message}`);
 
   const billing = billingRow as Billing | null;
   const invoices = (invoicesData ?? []) as Invoice[];

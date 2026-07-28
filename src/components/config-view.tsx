@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IconBilling, IconLock, IconPlus, IconCheck } from "@/components/icons";
 
 interface Profile {
@@ -22,21 +22,26 @@ interface Company {
 }
 
 const inputCls =
-  "w-full rounded-xl border border-input bg-background px-4 py-3 text-[15px] text-foreground placeholder:text-muted-foreground/70 transition-colors focus:border-brand focus:outline-none disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-input bg-background px-4 py-3 text-[15px] text-foreground placeholder:text-muted-foreground transition-colors focus:border-brand focus:outline-none disabled:cursor-not-allowed disabled:opacity-60";
 const labelCls = "text-foreground mb-1.5 block text-[13px] font-semibold";
 
+// `htmlFor` es obligatorio: sin él la etiqueta es solo texto decorativo y el
+// lector de pantalla anuncia el campo sin nombre. También hace que al pulsar
+// la etiqueta se enfoque el input.
 function Field({
+  htmlFor,
   label,
   hint,
   children,
 }: {
+  htmlFor: string;
   label: string;
   hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label className={labelCls}>
+      <label className={labelCls} htmlFor={htmlFor}>
         {label}
         {hint && (
           <span className="text-muted-foreground font-normal"> · {hint}</span>
@@ -55,6 +60,22 @@ function initials(p: Profile, email: string) {
 }
 
 type Status = { kind: "ok" | "err"; msg: string } | null;
+
+// Mensajes de fallo accionables: si el backend cae sin devolver JSON, el usuario
+// veía literalmente "Error" y no sabía qué hacer.
+const SAVE_ERROR =
+  "No hemos podido guardar. Revisa tu conexión e inténtalo de nuevo.";
+const AVATAR_REMOVE_ERROR = "No hemos podido quitar la imagen. Inténtalo de nuevo.";
+
+// Un 500 con HTML haría reventar res.json() y el usuario acabaría leyendo un
+// error de parseo. Devolvemos un objeto vacío y dejamos hablar al fallback.
+async function readJson(res: Response): Promise<{ [k: string]: unknown }> {
+  try {
+    return (await res.json()) as { [k: string]: unknown };
+  } catch {
+    return {};
+  }
+}
 
 export function ConfigView({
   email,
@@ -78,14 +99,56 @@ export function ConfigView({
   const [stP, setStP] = useState<Status>(null);
   const [stC, setStC] = useState<Status>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Última versión confirmada por el servidor. Arranca en las props y se
+  // actualiza tras cada guardado correcto; sin esto seguiríamos comparando
+  // contra las props (que no cambian) y avisaríamos de cambios sin guardar en
+  // un formulario recién guardado.
+  const [savedP, setSavedP] = useState<Profile>(profile);
+  const [savedC, setSavedC] = useState<Company>(company);
 
   const locked = readOnly;
   const companyEditable = canManageCompany && !readOnly;
 
-  const setPf = (k: keyof Profile, v: string) => setP((s) => ({ ...s, [k]: v }));
-  const setCf = (k: keyof Company, v: string) => setC((s) => ({ ...s, [k]: v }));
+  // Al volver a editar limpiamos el mensaje: si no, "Perfil guardado" sigue en
+  // pantalla mientras el usuario teclea cambios que todavía no se han enviado.
+  const setPf = (k: keyof Profile, v: string) => {
+    setStP(null);
+    setP((s) => ({ ...s, [k]: v }));
+  };
+  const setCf = (k: keyof Company, v: string) => {
+    setStC(null);
+    setC((s) => ({ ...s, [k]: v }));
+  };
+
+  // Hay cambios sin guardar si lo editado difiere de lo último confirmado por el
+  // servidor. El avatar no cuenta: se sube en el momento, no espera al botón.
+  const dirtyP = (Object.keys(p) as (keyof Profile)[]).some(
+    (k) => p[k] !== savedP[k],
+  );
+  const dirtyC = (Object.keys(c) as (keyof Company)[]).some(
+    (k) => c[k] !== savedC[k],
+  );
+  // La empresa solo se puede editar con permiso: si no, sus campos nunca
+  // ensucian el formulario aunque el estado difiera.
+  const dirty = dirtyP || (companyEditable && dirtyC);
+
+  // Aviso del navegador para que un cierre de pestaña accidental no se lleve por
+  // delante los cambios. Solo cubre beforeunload, no la navegación interna.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Chrome exige returnValue para mostrar el diálogo nativo.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   async function savePerfil() {
+    // Cortamos reentradas: el botón ya está disabled, pero un doble Enter o un
+    // clic muy rápido podría colarse antes del re-render.
+    if (savingP) return;
     setSavingP(true);
     setStP(null);
     try {
@@ -94,8 +157,10 @@ export function ConfigView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(p),
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Error");
+      const j = await readJson(res);
+      if (!res.ok)
+        throw new Error(typeof j.error === "string" ? j.error : SAVE_ERROR);
+      setSavedP(p);
       setStP({
         kind: "ok",
         msg: j.notionSynced
@@ -110,6 +175,7 @@ export function ConfigView({
   }
 
   async function saveEmpresa() {
+    if (savingC) return;
     setSavingC(true);
     setStC(null);
     try {
@@ -118,8 +184,10 @@ export function ConfigView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(c),
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Error");
+      const j = await readJson(res);
+      if (!res.ok)
+        throw new Error(typeof j.error === "string" ? j.error : SAVE_ERROR);
+      setSavedC(c);
       setStC({
         kind: "ok",
         msg: j.notionSynced
@@ -137,15 +205,20 @@ export function ConfigView({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (uploading) return;
     setUploading(true);
     setStP(null);
     try {
       const fd = new FormData();
       fd.append("imagen", file);
       const res = await fetch("/api/config/avatar", { method: "POST", body: fd });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Error");
-      setAvatar(j.url);
+      const j = await readJson(res);
+      if (!res.ok)
+        throw new Error(typeof j.error === "string" ? j.error : SAVE_ERROR);
+      setAvatar(typeof j.url === "string" ? j.url : null);
+      // Cambiar la miniatura no basta como confirmación: quien usa lector de
+      // pantalla (o quien mira el botón, no el avatar) no percibe nada.
+      setStP({ kind: "ok", msg: "Imagen actualizada." });
     } catch (err) {
       setStP({ kind: "err", msg: (err as Error).message });
     } finally {
@@ -154,13 +227,16 @@ export function ConfigView({
   }
 
   async function removeAvatar() {
+    if (uploading) return;
     setUploading(true);
+    setStP(null);
     try {
       const res = await fetch("/api/config/avatar", { method: "DELETE" });
-      if (!res.ok) throw new Error("Error");
+      if (!res.ok) throw new Error(AVATAR_REMOVE_ERROR);
       setAvatar(null);
+      setStP({ kind: "ok", msg: "Imagen eliminada." });
     } catch {
-      setStP({ kind: "err", msg: "No se pudo quitar la imagen" });
+      setStP({ kind: "err", msg: AVATAR_REMOVE_ERROR });
     } finally {
       setUploading(false);
     }
@@ -215,7 +291,7 @@ export function ConfigView({
                 type="button"
                 disabled={locked || uploading}
                 onClick={() => fileRef.current?.click()}
-                className="border-border bg-card text-foreground hover:bg-muted inline-flex items-center gap-1.5 rounded-[11px] border px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                className="border-border bg-card text-foreground hover:bg-muted inline-flex h-10 items-center gap-1.5 rounded-[11px] border px-3.5 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <IconPlus width={15} height={15} />
                 {uploading ? "Subiendo…" : "Subir imagen"}
@@ -225,7 +301,7 @@ export function ConfigView({
                   type="button"
                   disabled={uploading}
                   onClick={removeAvatar}
-                  className="text-muted-foreground hover:text-foreground text-[13px] font-medium transition-colors disabled:opacity-60"
+                  className="text-muted-foreground hover:text-foreground inline-flex h-10 items-center px-2 text-[13px] font-medium transition-colors disabled:opacity-60"
                 >
                   Quitar
                 </button>
@@ -244,26 +320,33 @@ export function ConfigView({
         <div className="border-border my-6 border-t" />
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nombre">
+          <Field htmlFor="perfil-nombre" label="Nombre">
             <input
+              id="perfil-nombre"
               className={inputCls}
               value={p.firstName}
               disabled={locked}
               onChange={(e) => setPf("firstName", e.target.value)}
-              placeholder="Javier"
+              placeholder="Nombre"
             />
           </Field>
-          <Field label="Apellidos">
+          <Field htmlFor="perfil-apellidos" label="Apellidos">
             <input
+              id="perfil-apellidos"
               className={inputCls}
               value={p.lastName}
               disabled={locked}
               onChange={(e) => setPf("lastName", e.target.value)}
-              placeholder="Salido"
+              placeholder="Apellidos"
             />
           </Field>
-          <Field label="Teléfono" hint="formato internacional">
+          <Field
+            htmlFor="perfil-telefono"
+            label="Teléfono"
+            hint="formato internacional"
+          >
             <input
+              id="perfil-telefono"
               className={inputCls}
               value={p.phone}
               disabled={locked}
@@ -271,8 +354,9 @@ export function ConfigView({
               placeholder="+34 600 000 000"
             />
           </Field>
-          <Field label="Cargo">
+          <Field htmlFor="perfil-cargo" label="Cargo">
             <input
+              id="perfil-cargo"
               className={inputCls}
               value={p.roleTitle}
               disabled={locked}
@@ -280,9 +364,10 @@ export function ConfigView({
               placeholder="p. ej. Director de operaciones"
             />
           </Field>
-          <Field label="Email">
+          <Field htmlFor="perfil-email" label="Email">
             <div className="relative">
               <input
+                id="perfil-email"
                 className={inputCls + " pr-10"}
                 value={email}
                 disabled
@@ -293,8 +378,9 @@ export function ConfigView({
               </span>
             </div>
           </Field>
-          <Field label="Email personal">
+          <Field htmlFor="perfil-email-personal" label="Email personal">
             <input
+              id="perfil-email-personal"
               className={inputCls}
               type="email"
               value={p.personalEmail}
@@ -303,8 +389,9 @@ export function ConfigView({
               placeholder="nombre@gmail.com"
             />
           </Field>
-          <Field label="Nacimiento">
+          <Field htmlFor="perfil-nacimiento" label="Nacimiento">
             <input
+              id="perfil-nacimiento"
               className={inputCls}
               type="date"
               value={p.birthday}
@@ -316,7 +403,11 @@ export function ConfigView({
 
         <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
           {stP && (
+            // role/aria-live para que el resultado del guardado se anuncie: antes
+            // era un span mudo y quien no ve la pantalla no sabía si había ido bien.
             <span
+              role="status"
+              aria-live="polite"
               className={
                 "inline-flex items-center gap-1.5 text-[13px] font-medium " +
                 (stP.kind === "ok" ? "text-success-foreground" : "text-danger-foreground")
@@ -330,7 +421,7 @@ export function ConfigView({
             type="button"
             disabled={locked || savingP}
             onClick={savePerfil}
-            className="bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold shadow-[0_6px_18px_color-mix(in_oklch,var(--brand),transparent_70%)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+            className="bg-brand text-brand-foreground inline-flex min-h-11 items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold shadow-[0_6px_18px_color-mix(in_oklch,var(--brand),transparent_70%)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
           >
             {savingP ? "Guardando…" : "Guardar cambios"}
           </button>
@@ -354,8 +445,9 @@ export function ConfigView({
         </p>
 
         <div className="mt-5 grid gap-4">
-          <Field label="Nombre fiscal">
+          <Field htmlFor="empresa-nombre-fiscal" label="Nombre fiscal">
             <input
+              id="empresa-nombre-fiscal"
               className={inputCls}
               value={c.fiscalName}
               disabled={!companyEditable}
@@ -364,8 +456,9 @@ export function ConfigView({
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="CIF / EIN">
+            <Field htmlFor="empresa-cif" label="CIF / EIN">
               <input
+                id="empresa-cif"
                 className={inputCls}
                 value={c.taxId}
                 disabled={!companyEditable}
@@ -373,8 +466,9 @@ export function ConfigView({
                 placeholder="B12345678"
               />
             </Field>
-            <Field label="Código postal">
+            <Field htmlFor="empresa-cp" label="Código postal">
               <input
+                id="empresa-cp"
                 className={inputCls}
                 value={c.postalCode}
                 disabled={!companyEditable}
@@ -383,8 +477,9 @@ export function ConfigView({
               />
             </Field>
           </div>
-          <Field label="Dirección">
+          <Field htmlFor="empresa-direccion" label="Dirección">
             <input
+              id="empresa-direccion"
               className={inputCls}
               value={c.address}
               disabled={!companyEditable}
@@ -392,8 +487,12 @@ export function ConfigView({
               placeholder="Calle, número, piso"
             />
           </Field>
-          <Field label="Ubicación (Localidad, Provincia / Estado)">
+          <Field
+            htmlFor="empresa-ubicacion"
+            label="Ubicación (Localidad, Provincia / Estado)"
+          >
             <input
+              id="empresa-ubicacion"
               className={inputCls}
               value={c.city}
               disabled={!companyEditable}
@@ -407,6 +506,8 @@ export function ConfigView({
           <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
             {stC && (
               <span
+                role="status"
+                aria-live="polite"
                 className={
                   "inline-flex items-center gap-1.5 text-[13px] font-medium " +
                   (stC.kind === "ok" ? "text-success-foreground" : "text-danger-foreground")
@@ -420,7 +521,7 @@ export function ConfigView({
               type="button"
               disabled={savingC}
               onClick={saveEmpresa}
-              className="bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold shadow-[0_6px_18px_color-mix(in_oklch,var(--brand),transparent_70%)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+              className="bg-brand text-brand-foreground inline-flex min-h-11 items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold shadow-[0_6px_18px_color-mix(in_oklch,var(--brand),transparent_70%)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
             >
               {savingC ? "Guardando…" : "Guardar datos fiscales"}
             </button>

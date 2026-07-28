@@ -45,6 +45,10 @@ function slugify(s: string) {
   return (
     s
       .toLowerCase()
+      // Sin normalizar, "Ingeniería Añón" salía como "ingenier-a-a-n": las
+      // vocales acentuadas y la ñ caían en el reemplazo de no-alfanuméricos.
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 40) || "empresa"
@@ -142,7 +146,9 @@ export async function syncPortalMembers({
   let updated = 0;
   let skipped = 0;
   let provisioned = 0;
+  const failed: string[] = [];
   for (const m of plan) {
+   try {
     // Asegura la fila de empresa.
     const { data: comp } = await admin
       .from("companies")
@@ -204,7 +210,45 @@ export async function syncPortalMembers({
 
     // Aprovisiona Auth para que el cliente pueda recibir el código OTP.
     if (await ensureAuthUser(admin, m.email)) provisioned++;
+   } catch (e) {
+     // Un miembro que falla no debe abortar el resto del plan dejando filas a
+     // medias y sin contadores.
+     console.error(`[sync:members] ${m.email}`, e);
+     failed.push(m.email);
+   }
   }
+
+  // REVOCACIÓN. Sin esto la sync solo daba de alta: un contacto que pasa a
+  // "Obsoleto", pierde el check de Avans/Facturación o cuya empresa deja de
+  // tener membresía conservaba el acceso al portal indefinidamente.
+  //
+  // Solo se desactiva si el plan se ha construido con datos (un plan vacío
+  // significaría un fallo de lectura de Notion, no que ya no haya clientes) y
+  // nunca se toca a un admin.
+  let revoked = 0;
+  if (plan.length > 0) {
+    const allowed = new Set(plan.map((m) => m.email));
+    const { data: current, error: curErr } = await admin
+      .from("portal_users")
+      .select("id, email")
+      .eq("active", true)
+      .neq("role", "admin");
+    if (curErr) throw curErr;
+
+    const toRevoke = (current ?? [])
+      .filter((u) => u.email && !allowed.has(u.email.toLowerCase()))
+      .map((u) => u.id);
+
+    if (toRevoke.length > 0) {
+      const rev = await admin
+        .from("portal_users")
+        .update({ active: false })
+        .in("id", toRevoke);
+      if (rev.error) throw rev.error;
+      revoked = toRevoke.length;
+    }
+  }
+
   return {
     applied: true,
     eligibleCompanies: eligibleCompanies.size,
@@ -212,6 +256,8 @@ export async function syncPortalMembers({
     created,
     updated,
     skipped,
+    revoked,
+    failed,
     provisioned,
   };
 }

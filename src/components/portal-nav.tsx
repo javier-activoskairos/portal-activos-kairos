@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   IconAlert,
   IconAssets,
@@ -58,6 +58,29 @@ function SoonTag({ className }: { className?: string }) {
   );
 }
 
+// Contador de incidencias abiertas. El número solo no comunica nada a un lector
+// de pantalla, así que lo acompañamos de texto oculto visualmente.
+function OpenIncidentsBadge({
+  count,
+  className,
+}: {
+  count: number;
+  className?: string;
+}) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className={cn(
+        "bg-brand text-brand-foreground inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 py-px text-[10.5px] font-bold tabular-nums",
+        className,
+      )}
+    >
+      {count}
+      <span className="sr-only"> incidencias abiertas</span>
+    </span>
+  );
+}
+
 function LogoutButton({ className }: { className?: string }) {
   return (
     <form action="/auth/signout" method="post" className={className}>
@@ -81,6 +104,7 @@ export function PortalNav({
   displayName = null,
   avatarUrl = null,
   custodianUserIds = [],
+  readOnly = false,
 }: {
   email: string;
   companyName: string;
@@ -91,12 +115,16 @@ export function PortalNav({
   displayName?: string | null;
   avatarUrl?: string | null;
   custodianUserIds?: string[];
+  /** Modo "Ver como cliente": el backend rechaza las escrituras con 403,
+   *  así que los CTA que crean datos se deshabilitan en la propia UI. */
+  readOnly?: boolean;
 }) {
   // "Facturación" solo para el rol Facturación.
   const navItems = NAV_ITEMS.filter(
     (i) => i.href !== "/facturacion" || canBilling,
   );
   const pathname = usePathname();
+  const router = useRouter();
   const initials = initialsFromEmail(email);
   const shownName = displayName || fullNameFromEmail(email);
   const [meetingOpen, setMeetingOpen] = useState(false);
@@ -132,8 +160,22 @@ export function PortalNav({
       active
         ? "bg-accent text-brand-accent font-semibold"
         : muted
-          ? "text-muted-foreground/70"
+          ? // Sin opacidad: a 13–14px el /70 caía por debajo del mínimo AA.
+            "text-muted-foreground"
           : "text-muted-foreground hover:text-foreground font-medium",
+    );
+
+  // Motivo compartido por los CTA bloqueados en modo previsualización.
+  const readOnlyTitle = "No disponible en modo previsualización";
+
+  // Pastilla de la nav móvil. min-h-11 (44px) para cumplir el objetivo táctil
+  // mínimo; antes el py-2 la dejaba en ~34px.
+  const pillCls = (active: boolean) =>
+    cn(
+      "flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] whitespace-nowrap transition-colors",
+      active
+        ? "bg-accent text-brand-accent font-semibold"
+        : "text-muted-foreground hover:text-foreground font-medium",
     );
 
   return (
@@ -149,7 +191,8 @@ export function PortalNav({
           onClick={toggleCollapsed}
           title={collapsed ? "Expandir menú" : "Contraer menú"}
           aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
-          className="border-border bg-card text-muted-foreground hover:text-foreground hover:border-brand/40 absolute top-[70px] -right-3 z-50 flex size-6 items-center justify-center rounded-full border shadow-[var(--shadow-sm)] transition-colors"
+          // size-9: objetivo táctil/de puntero mínimo razonable (era size-6).
+          className="border-border bg-card text-muted-foreground hover:text-foreground hover:border-brand/40 absolute top-[70px] -right-[18px] z-50 flex size-9 items-center justify-center rounded-full border shadow-[var(--shadow-sm)] transition-colors"
         >
           <IconChevronLeft
             width={14}
@@ -209,15 +252,22 @@ export function PortalNav({
                 </Link>
               );
             }
+            const badge = item.href === "/incidencias" ? openIncidents : 0;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 title={collapsed ? item.label : undefined}
-                className={rowCls(active)}
+                className={cn(rowCls(active), "relative")}
               >
                 <Icon />
                 {!collapsed && item.label}
+                {/* Colapsada no hay etiqueta donde anclar el contador, así que
+                    se superpone sobre el icono. */}
+                <OpenIncidentsBadge
+                  count={badge}
+                  className={collapsed ? "absolute top-1 right-1" : "ml-auto"}
+                />
               </Link>
             );
           })}
@@ -265,10 +315,18 @@ export function PortalNav({
           <button
             type="button"
             onClick={() => setIncidentOpen(true)}
-            title={collapsed ? "Nueva incidencia" : undefined}
+            disabled={readOnly}
+            title={
+              readOnly
+                ? readOnlyTitle
+                : collapsed
+                  ? "Nueva incidencia"
+                  : undefined
+            }
             className={cn(
               "border-border bg-card text-foreground hover:bg-muted flex w-full items-center rounded-xl border text-[13.5px] font-medium transition-colors",
               collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5",
+              readOnly && "cursor-not-allowed opacity-50 hover:bg-card",
             )}
           >
             <IconPlus width={17} height={17} />
@@ -430,51 +488,38 @@ export function PortalNav({
         <Link href="/inicio" className="flex shrink-0 items-center">
           <BrandMark size={28} radius={8} />
         </Link>
-        <nav className="flex flex-1 gap-1 overflow-x-auto">
+        {/* La máscara degradada de la derecha insinúa que la lista sigue: con
+            hasta 7 destinos en 360px los últimos se cortan sin ninguna pista. */}
+        <nav className="flex flex-1 gap-1 overflow-x-auto [mask-image:linear-gradient(to_right,#000_0,#000_calc(100%-24px),transparent_100%)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = !item.soon && isActive(item.href);
-            if (item.soon) {
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] whitespace-nowrap transition-colors",
-                    isActive(item.href)
-                      ? "bg-accent text-brand-accent font-semibold"
-                      : "text-muted-foreground hover:text-foreground font-medium",
-                  )}
-                >
-                  <Icon width={16} height={16} /> {item.label}
-                </Link>
-              );
-            }
+            const badge = item.href === "/incidencias" ? openIncidents : 0;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] whitespace-nowrap transition-colors",
-                  active
-                    ? "bg-accent text-brand-accent font-semibold"
-                    : "text-muted-foreground hover:text-foreground font-medium",
-                )}
+                className={pillCls(item.soon ? isActive(item.href) : active)}
               >
                 <Icon width={16} height={16} /> {item.label}
+                <OpenIncidentsBadge count={badge} />
               </Link>
             );
           })}
+          {/* Memento Mori y Scholē solo existían en la sidebar de escritorio. */}
+          <Link href="/memento-mori" className={pillCls(isActive("/memento-mori"))}>
+            <IconHourglass width={16} height={16} /> Memento Mori
+          </Link>
+          <a
+            href={SCHOLE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={pillCls(false)}
+          >
+            <IconTemple width={16} height={16} /> Scholē Kairos
+          </a>
           {isAdmin && (
-            <Link
-              href="/admin"
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] whitespace-nowrap transition-colors",
-                isActive("/admin")
-                  ? "bg-accent text-brand-accent font-semibold"
-                  : "text-muted-foreground hover:text-foreground font-medium",
-              )}
-            >
+            <Link href="/admin" className={pillCls(isActive("/admin"))}>
               <IconLock width={16} height={16} /> Sync
             </Link>
           )}
@@ -485,26 +530,50 @@ export function PortalNav({
             onClick={() => setMeetingOpen(true)}
             title="Agendar reunión"
             aria-label="Agendar reunión"
-            className="bg-brand text-brand-foreground flex size-[38px] items-center justify-center rounded-[11px] shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90"
+            className="bg-brand text-brand-foreground flex size-11 items-center justify-center rounded-[11px] shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90"
           >
             <IconCalendar />
           </button>
           <button
             type="button"
             onClick={() => setIncidentOpen(true)}
-            title="Nueva incidencia"
+            disabled={readOnly}
+            title={readOnly ? readOnlyTitle : "Nueva incidencia"}
             aria-label="Nueva incidencia"
-            className="border-border bg-card text-foreground hover:bg-muted flex size-[38px] items-center justify-center rounded-[11px] border transition-colors"
+            className={cn(
+              "border-border bg-card text-foreground hover:bg-muted flex size-11 items-center justify-center rounded-[11px] border transition-colors",
+              readOnly && "cursor-not-allowed opacity-50 hover:bg-card",
+            )}
           >
             <IconPlus />
           </button>
           <ThemeToggle />
+          {/* Único acceso a /configuracion desde móvil: sin él no se puede
+              editar perfil ni datos fiscales (y /facturacion enlaza aquí). */}
+          <Link
+            href="/configuracion"
+            title="Configuración"
+            aria-label="Configuración"
+            className={cn(
+              "flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-[13px] font-bold transition-colors",
+              isActive("/configuracion")
+                ? "bg-brand text-brand-foreground"
+                : "bg-accent text-brand-accent",
+            )}
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="size-full object-cover" />
+            ) : (
+              initials
+            )}
+          </Link>
           <form action="/auth/signout" method="post">
             <button
               type="submit"
               title="Cerrar sesión"
               aria-label="Cerrar sesión"
-              className="border-border bg-card text-foreground hover:bg-muted flex size-[38px] items-center justify-center rounded-[11px] border transition-colors"
+              className="border-border bg-card text-foreground hover:bg-muted flex size-11 items-center justify-center rounded-[11px] border transition-colors"
             >
               <IconLogout />
             </button>
@@ -517,9 +586,14 @@ export function PortalNav({
         onClose={() => setMeetingOpen(false)}
         custodianUserIds={custodianUserIds}
       />
+      {/* Al reportar una incidencia, la lista servida por el Server Component
+          queda obsoleta: refrescamos para que aparezca sin recargar a mano. */}
       <IncidentModal
         open={incidentOpen}
-        onClose={() => setIncidentOpen(false)}
+        onClose={(didSubmit) => {
+          setIncidentOpen(false);
+          if (didSubmit) router.refresh();
+        }}
       />
     </>
   );

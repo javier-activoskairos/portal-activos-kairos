@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/status-badge";
 import {
   IconArrowLeft,
@@ -12,7 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { ReopenIncidentModal } from "@/components/reopen-incident-modal";
 import { VerifyIncidentModal } from "@/components/verify-incident-modal";
-import { formatDate, incidentBadge } from "@/lib/status";
+import {
+  formatDate,
+  incidentBadge,
+  incidentBucket,
+  incidentStatusLabel,
+} from "@/lib/status";
 import { cn } from "@/lib/utils";
 
 export interface IncidentRow {
@@ -32,19 +38,17 @@ export interface IncidentRow {
   sla_deadline: string | null;
 }
 
-// Grupos por Estado de Notion (mismos grupos que el status de Notion).
-const OPEN = new Set(["Pendiente", "Solucionando", "En Espera"]);
-const VERIFY = new Set(["Verificación"]);
-// "Complete" en Notion: incluye Escalada y Solucionada con Acciones Pendientes.
-const RESOLVED = new Set([
-  "Solucionada",
-  "Solucionada con Acciones Pendientes",
-  "Escalada",
-]);
+// La clasificación vive en `@/lib/status` (`incidentBucket`). Antes había aquí
+// tres conjuntos locales que se contradecían con los del resto del portal, así
+// que esta vista solo envuelve la fuente única de verdad.
+const isOpen = (i: IncidentRow) => incidentBucket(i.status) === "open";
+const isVerify = (i: IncidentRow) => incidentBucket(i.status) === "verify";
+const isResolved = (i: IncidentRow) => incidentBucket(i.status) === "resolved";
 
-const isOpen = (i: IncidentRow) => OPEN.has(i.status);
-const isVerify = (i: IncidentRow) => VERIFY.has(i.status);
-const isResolved = (i: IncidentRow) => RESOLVED.has(i.status);
+// Foco visible compartido por las filas clicables de la tabla: la fila entera se
+// activa desde un <button> superpuesto, así que el anillo se pinta sobre la <tr>.
+const ROW_FOCUS =
+  "has-[button:focus-visible]:outline-ring has-[button:focus-visible]:outline-2 has-[button:focus-visible]:-outline-offset-2";
 
 function isImageUrl(url: string) {
   return /\.(png|jpe?g|webp|gif|svg|avif)(\?|$)/i.test(url);
@@ -72,7 +76,7 @@ function IncidentDetail({
         <button
           type="button"
           onClick={onBack}
-          className="text-muted-foreground hover:text-foreground -ml-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13.5px] font-medium transition-colors"
+          className="text-muted-foreground hover:text-foreground -ml-2 flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13.5px] font-medium transition-colors"
         >
           <IconArrowLeft width={16} height={16} />
           Volver a Incidencias
@@ -82,7 +86,7 @@ function IncidentDetail({
             <button
               type="button"
               onClick={onVerify}
-              className="bg-brand text-brand-foreground flex items-center gap-2 rounded-xl px-4 py-2 text-[13.5px] font-semibold shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90"
+              className="bg-brand text-brand-foreground flex min-h-11 items-center gap-2 rounded-xl px-4 py-2 text-[13.5px] font-semibold shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90"
             >
               <IconCheck width={15} height={15} />
               Verificar
@@ -92,7 +96,7 @@ function IncidentDetail({
             <button
               type="button"
               onClick={onReopen}
-              className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors"
+              className="border-border bg-card text-foreground hover:bg-muted flex min-h-11 items-center gap-2 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors"
             >
               <IconRefresh width={15} height={15} />
               Reabrir
@@ -109,7 +113,7 @@ function IncidentDetail({
           <h1 className="text-foreground max-w-[26ch] text-2xl leading-tight font-extrabold tracking-tight">
             {incident.title}
           </h1>
-          <StatusBadge label={incident.status} spec={badge} />
+          <StatusBadge label={incidentStatusLabel(incident.status)} spec={badge} />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
@@ -117,7 +121,7 @@ function IncidentDetail({
               Estado
             </div>
             <div className="text-foreground text-[15px] font-semibold">
-              {incident.status}
+              {incidentStatusLabel(incident.status)}
             </div>
           </div>
           <div>
@@ -237,6 +241,7 @@ function IncidentDetail({
 }
 
 export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
+  const router = useRouter();
   const [resueltasQuery, setResueltasQuery] = useState("");
   const [topView, setTopView] = useState<"abiertas" | "verificar">("abiertas");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -277,6 +282,15 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
       });
   }, [incidents, resueltasQuery]);
 
+  // Tras un envío correcto, el estado de la incidencia ya cambió en Notion pero
+  // estas props vienen de un Server Component: sin `router.refresh()` la tarjeta
+  // sigue mostrando el botón activo y el usuario puede enviar una segunda
+  // valoración sobre la misma incidencia.
+  const closeAfter = (clear: () => void) => (didSubmit?: boolean) => {
+    clear();
+    if (didSubmit) router.refresh();
+  };
+
   const modals = (
     <>
       {reopenInc && (
@@ -284,7 +298,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           open
           incidentId={reopenInc.id}
           incidentTitle={reopenInc.title}
-          onClose={() => setReopenId(null)}
+          onClose={closeAfter(() => setReopenId(null))}
         />
       )}
       {verifyInc && (
@@ -292,7 +306,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           open
           incidentId={verifyInc.id}
           incidentTitle={verifyInc.title}
-          onClose={() => setVerifyId(null)}
+          onClose={closeAfter(() => setVerifyId(null))}
         />
       )}
     </>
@@ -329,7 +343,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                 type="button"
                 onClick={() => setTopView(t.key)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  "flex min-h-10 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
                   topView === t.key
                     ? "bg-card text-brand-accent shadow-[var(--shadow-sm)]"
                     : "text-muted-foreground hover:text-foreground",
@@ -349,7 +363,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
               sub="Todo está funcionando con normalidad."
             />
           ) : (
-            <div className="grid gap-3.5 min-[1100px]:grid-cols-4 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3">
+            <div className="grid gap-3.5 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1100px]:grid-cols-4">
               {abiertas.map((i) => (
                 <IncidentCard key={i.id} i={i} onOpen={() => setSelectedId(i.id)} />
               ))}
@@ -361,7 +375,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
             sub="Cuando resolvamos algo, aquí podrás verificarlo y valorarlo."
           />
         ) : (
-          <div className="grid gap-3.5 min-[1100px]:grid-cols-4 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3">
+          <div className="grid gap-3.5 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1100px]:grid-cols-4">
             {porVerificar.map((i) => (
               <div
                 key={i.id}
@@ -376,7 +390,10 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                     <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
                       {i.title}
                     </span>
-                    <StatusBadge label={i.status} spec={incidentBadge(i.status)} />
+                    <StatusBadge
+                      label={incidentStatusLabel(i.status)}
+                      spec={incidentBadge(i.status)}
+                    />
                   </div>
                   <div className="text-muted-foreground text-[12px]">
                     {formatDate(i.created_at)}
@@ -387,14 +404,14 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                   <button
                     type="button"
                     onClick={() => setVerifyId(i.id)}
-                    className="bg-brand text-brand-foreground flex flex-1 items-center justify-center gap-1.5 rounded-[11px] px-3 py-2 text-[12.5px] font-semibold transition-opacity hover:opacity-90"
+                    className="bg-brand text-brand-foreground flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[11px] px-3 py-2 text-[12.5px] font-semibold transition-opacity hover:opacity-90"
                   >
                     <IconCheck width={14} height={14} /> Verificar
                   </button>
                   <button
                     type="button"
                     onClick={() => setReopenId(i.id)}
-                    className="border-border bg-card text-foreground hover:bg-muted flex flex-1 items-center justify-center gap-1.5 rounded-[11px] border px-3 py-2 text-[12.5px] font-semibold transition-colors"
+                    className="border-border bg-card text-foreground hover:bg-muted flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[11px] border px-3 py-2 text-[12.5px] font-semibold transition-colors"
                   >
                     <IconRefresh width={14} height={14} /> Reabrir
                   </button>
@@ -442,19 +459,31 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
               </thead>
               <tbody>
                 {resueltas.map((i) => (
+                  // La fila entera se activa desde el <button> del título, que se
+                  // estira con `after:inset-0` sobre la <tr> (por eso `relative`).
+                  // Así se mantiene el aspecto de fila clicable pero es
+                  // alcanzable con Tab y con Enter/Espacio.
                   <tr
                     key={i.id}
-                    onClick={() => setSelectedId(i.id)}
-                    className="border-border/60 hover:bg-muted/40 cursor-pointer border-t transition-colors"
+                    className={cn(
+                      "border-border/60 hover:bg-muted/40 relative cursor-pointer border-t transition-colors",
+                      ROW_FOCUS,
+                    )}
                   >
                     <td className="px-[18px] py-4 align-middle">
                       <StatusBadge
-                        label={i.status}
+                        label={incidentStatusLabel(i.status)}
                         spec={incidentBadge(i.status)}
                       />
                     </td>
                     <td className="text-foreground px-[18px] py-4 align-middle text-sm font-semibold">
-                      {i.title}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(i.id)}
+                        className="text-left after:absolute after:inset-0 focus-visible:outline-none"
+                      >
+                        {i.title}
+                      </button>
                     </td>
                     <td className="text-muted-foreground px-[18px] py-4 align-middle text-sm whitespace-nowrap">
                       {i.label ?? "—"}
@@ -501,7 +530,10 @@ function IncidentCard({
         <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
           {i.title}
         </span>
-        <StatusBadge label={i.status} spec={incidentBadge(i.status)} />
+        <StatusBadge
+          label={incidentStatusLabel(i.status)}
+          spec={incidentBadge(i.status)}
+        />
       </div>
       <div className="text-muted-foreground mt-auto text-[12px]">
         {formatDate(i.created_at)}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconCheck, IconClose, IconRefresh } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 const MAX_IMAGE_MB = 8;
 
@@ -16,7 +17,9 @@ export function ReopenIncidentModal({
   open: boolean;
   incidentId: string;
   incidentTitle: string;
-  onClose: () => void;
+  /** Se invoca siempre al cerrar; recibe si hubo un envío correcto para que la
+   *  vista pueda refrescarse (la lista es server-rendered y no se entera sola). */
+  onClose: (didSubmit?: boolean) => void;
 }) {
   const [motivo, setMotivo] = useState("");
   const [loom, setLoom] = useState("");
@@ -38,14 +41,23 @@ export function ReopenIncidentModal({
     }
   }
 
+  const dialogRef = useModalA11y(open);
+
+  // Cerrar a mitad de un envío dejaba la petición en el aire sin confirmación:
+  // el usuario reintentaba y se reabría la incidencia por duplicado.
+  const requestClose = () => {
+    if (loading) return;
+    onClose(sent);
+  };
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !loading) onClose(sent);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, loading, sent]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -70,11 +82,24 @@ export function ReopenIncidentModal({
         method: "POST",
         body: form,
       });
-      if (!res.ok) throw new Error("request failed");
+      if (!res.ok) {
+        // El servidor explica el motivo (403 en previsualización, 401 por
+        // sesión caducada…). Mostrarlo evita reintentos a ciegas.
+        let msg =
+          "No hemos podido reabrir la incidencia. Inténtalo de nuevo en un momento.";
+        try {
+          const body = await res.json();
+          if (body?.error) msg = String(body.error);
+        } catch {
+          // Respuesta sin cuerpo JSON: se queda el mensaje por defecto.
+        }
+        setError(msg);
+        return;
+      }
       setSent(true);
     } catch {
       setError(
-        "No hemos podido reabrir la incidencia. Inténtalo de nuevo en un momento.",
+        "No hemos podido conectar. Revisa tu conexión e inténtalo de nuevo.",
       );
     } finally {
       setLoading(false);
@@ -86,19 +111,21 @@ export function ReopenIncidentModal({
 
   return createPortal(
     <div
-      onClick={onClose}
-      className="animate-in fade-in-0 fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(15,12,9,0.55)] p-5 backdrop-blur-[4px] duration-200"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Reabrir incidencia"
+      onClick={requestClose}
+      className="animate-in fade-in-0 fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[rgba(15,12,9,0.55)] p-5 backdrop-blur-[4px] duration-200"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reopen-modal-title"
         onClick={(e) => e.stopPropagation()}
-        className="border-border bg-card animate-in fade-in-0 zoom-in-95 relative max-h-[calc(100vh-40px)] w-full max-w-[540px] overflow-y-auto rounded-[22px] border p-[30px] shadow-[var(--shadow-lg)] duration-200"
+        className="border-border bg-card animate-in fade-in-0 zoom-in-95 relative my-auto max-h-[calc(100vh-40px)] w-full max-w-[540px] overflow-y-auto rounded-[22px] border p-[30px] shadow-[var(--shadow-lg)] duration-200 outline-none"
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={requestClose}
           aria-label="Cerrar"
           className="border-border bg-card text-muted-foreground hover:bg-muted absolute top-4 right-4 flex size-[34px] items-center justify-center rounded-[10px] border transition-colors"
         >
@@ -117,7 +144,10 @@ export function ReopenIncidentModal({
             <span className="bg-success text-success-foreground mb-3.5 inline-flex size-[52px] items-center justify-center rounded-full">
               <IconCheck width={26} height={26} />
             </span>
-            <h2 className="text-foreground text-[21px] font-extrabold tracking-tight">
+            <h2
+              id="reopen-modal-title"
+              className="text-foreground text-[21px] font-extrabold tracking-tight"
+            >
               Incidencia reabierta
             </h2>
             <p className="text-muted-foreground mx-auto mt-1.5 mb-5 max-w-[42ch] text-sm leading-relaxed">
@@ -126,7 +156,7 @@ export function ReopenIncidentModal({
             </p>
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="bg-brand text-brand-foreground h-11 rounded-[13px] px-6 text-sm font-semibold shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90"
             >
               Cerrar
@@ -134,7 +164,10 @@ export function ReopenIncidentModal({
           </div>
         ) : (
           <form onSubmit={submit} className="animate-in fade-in-0 duration-200">
-            <h2 className="text-foreground text-[22px] font-extrabold tracking-tight">
+            <h2
+              id="reopen-modal-title"
+              className="text-foreground text-[22px] font-extrabold tracking-tight"
+            >
               Reabrir incidencia
             </h2>
             <p className="text-muted-foreground mt-1 mb-1.5 text-sm leading-relaxed">
@@ -147,11 +180,15 @@ export function ReopenIncidentModal({
 
             <div className="mt-4 flex flex-col gap-4">
               <div>
-                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                <label
+                  htmlFor="reopen-motivo"
+                  className="text-foreground mb-1.5 block text-[12.5px] font-bold"
+                >
                   ¿Por qué la reabres?
                   <span className="text-brand-accent"> *</span>
                 </label>
                 <textarea
+                  id="reopen-motivo"
                   required
                   rows={4}
                   value={motivo}
@@ -161,13 +198,17 @@ export function ReopenIncidentModal({
                 />
               </div>
               <div>
-                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                <label
+                  htmlFor="reopen-loom"
+                  className="text-foreground mb-1.5 block text-[12.5px] font-bold"
+                >
                   Loom o enlace{" "}
                   <span className="text-muted-foreground font-medium">
                     (opcional)
                   </span>
                 </label>
                 <input
+                  id="reopen-loom"
                   type="url"
                   value={loom}
                   onChange={(e) => setLoom(e.target.value)}
@@ -176,7 +217,10 @@ export function ReopenIncidentModal({
                 />
               </div>
               <div>
-                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                <label
+                  htmlFor="reopen-imagen"
+                  className="text-foreground mb-1.5 block text-[12.5px] font-bold"
+                >
                   Imagen asociada{" "}
                   <span className="text-muted-foreground font-medium">
                     (opcional)
@@ -197,10 +241,12 @@ export function ReopenIncidentModal({
                   </div>
                 ) : (
                   <label
+                    htmlFor="reopen-imagen"
                     className={`${fieldClass} text-muted-foreground hover:border-brand/50 flex cursor-pointer items-center gap-2`}
                   >
                     <span>Subir una captura o foto…</span>
                     <input
+                      id="reopen-imagen"
                       type="file"
                       accept="image/*"
                       className="hidden"
@@ -212,7 +258,9 @@ export function ReopenIncidentModal({
             </div>
 
             {error && (
-              <p className="text-danger-foreground mt-4 text-[13px]">{error}</p>
+              <p role="alert" className="text-danger-foreground mt-4 text-[13px]">
+                {error}
+              </p>
             )}
 
             <button

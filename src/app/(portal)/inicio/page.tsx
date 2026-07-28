@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPortalDb } from "@/lib/session";
 import { IconAlert, IconAssets, IconBuilding } from "@/components/icons";
-import { formatProgress } from "@/lib/status";
+import { formatProgress, incidentBucket } from "@/lib/status";
 import { nameFromEmail } from "@/lib/utils";
 import { niceScale, fmtHoras } from "@/lib/charts";
 import {
@@ -13,10 +13,6 @@ import {
 
 export const metadata = { title: "Inicio · Portal Activos Kairos" };
 export const dynamic = "force-dynamic";
-
-// Mismos estados que el bloque "Abiertas" de la vista de Incidencias.
-// ("Verificación" va a Por verificar; Solucionada*/Escalada van a Resueltas.)
-const OPEN_INCIDENTS = ["Pendiente", "Solucionando", "En Espera"];
 
 const MONTHS_ES = [
   "Ene",
@@ -107,6 +103,13 @@ export default async function InicioPage() {
       .eq("company_id", companyId),
   ]);
 
+  // Un fallo de consulta se veía exactamente igual que un portal vacío: todos
+  // los KPIs y gráficos a cero y ningún aviso, así que nadie lo reportaba.
+  const failed = [assetsRes, incidentsRes, meetingsRes].find((r) => r.error);
+  if (failed?.error) {
+    throw new Error(`No se pudieron cargar tus datos: ${failed.error.message}`);
+  }
+
   const assets = (assetsRes.data ?? []) as AssetRow[];
   const incidents = (incidentsRes.data ?? []) as IncidentRow[];
   const meetings = (meetingsRes.data ?? []) as {
@@ -117,8 +120,10 @@ export default async function InicioPage() {
   const proposed = assets.filter((a) => a.status === "Por Empezar");
   const inProgress = assets.filter((a) => a.status === "En Progreso");
   const done = assets.filter((a) => a.status === "Terminado");
-  const openIncidents = incidents.filter((i) =>
-    OPEN_INCIDENTS.includes(i.status),
+  // Clasificación única compartida con la vista de Incidencias y el badge del
+  // menú (@/lib/status), para que los tres números no se contradigan.
+  const openIncidents = incidents.filter(
+    (i) => incidentBucket(i.status) === "open",
   ).length;
 
   // En "Ver como cliente" saludamos con la identidad del cliente representativo.
@@ -172,8 +177,15 @@ export default async function InicioPage() {
   // --- Gráfico B: incidencias por mes (por created_at), resueltas/abiertas ---
   const incidentsByMonth = months.map((m) => {
     const inMonth = incidents.filter((i) => monthKey(i.created_at) === m.key);
-    const resolvedItems = inMonth.filter((i) => i.resolved_at).map((i) => i.title);
-    const openItems = inMonth.filter((i) => !i.resolved_at).map((i) => i.title);
+    // Clasificación por ESTADO, no por si tiene fecha de fin: una incidencia
+    // Solucionada sin "Fin" en Notion se pintaba como abierta en el gráfico
+    // mientras el KPI de arriba no la contaba, en la misma pantalla.
+    const resolvedItems = inMonth
+      .filter((i) => incidentBucket(i.status) !== "open")
+      .map((i) => i.title);
+    const openItems = inMonth
+      .filter((i) => incidentBucket(i.status) === "open")
+      .map((i) => i.title);
     return {
       label: m.label,
       resolved: resolvedItems.length,
@@ -280,7 +292,7 @@ export default async function InicioPage() {
     <div className="portal-reveal space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-foreground text-[25px] font-extrabold tracking-tight">
-          Hola, {firstName || "de nuevo"}.
+          {firstName ? `Hola, ${firstName}.` : "Hola de nuevo."}
         </h1>
       </div>
 

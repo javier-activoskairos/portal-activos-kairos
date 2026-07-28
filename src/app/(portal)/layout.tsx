@@ -3,14 +3,7 @@ import { getPortalDb } from "@/lib/session";
 import { PortalNav } from "@/components/portal-nav";
 import { exitViewAs } from "./admin/view-as-actions";
 import { IconLogout } from "@/components/icons";
-
-const OPEN_INCIDENTS = [
-  "Pendiente",
-  "Solucionando",
-  "En Espera",
-  "Escalada",
-  "Solucionada con Acciones Pendientes",
-];
+import { INCIDENT_OPEN } from "@/lib/status";
 
 export default async function PortalLayout({
   children,
@@ -22,12 +15,15 @@ export default async function PortalLayout({
   if (!ctx) redirect("/acceso-denegado");
   const { session, db, companyId } = ctx;
 
-  // Contador de incidencias abiertas para el badge del menú.
+  // Contador de incidencias abiertas para el badge del menú. Usa la lista
+  // canónica de @/lib/status: antes este contador incluía "Escalada", que la
+  // vista de Incidencias trata como resuelta, así que el badge decía "3" y en
+  // la pantalla solo se veía 1 abierta.
   const { count: openIncidents } = await db
     .from("incidents")
     .select("id", { count: "exact", head: true })
     .eq("company_id", companyId)
-    .in("status", OPEN_INCIDENTS);
+    .in("status", [...INCIDENT_OPEN]);
 
   // Perfil del usuario (avatar/nombre) para el bloque inferior de la nav.
   const { data: me } = await db
@@ -58,6 +54,9 @@ export default async function PortalLayout({
         canBilling={session.canManageCompany}
         custodianUserIds={session.custodianUserIds}
         openIncidents={openIncidents ?? 0}
+        // En previsualización el backend rechaza las escrituras con 403: los
+        // CTA se deshabilitan para no invitar a una acción que va a fallar.
+        readOnly={!!va}
       />
       <main className="transition-[margin] duration-200 min-[900px]:ml-[var(--kp-sidebar-w,244px)]">
         {/* Vista de cliente: píldora flotante, no una barra. Así el portal se

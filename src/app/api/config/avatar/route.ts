@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getPortalSession } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { updateNotionContact } from "@/lib/notion-write";
+import {
+  safeImageExtension,
+  IMAGE_EXTENSIONS,
+  IMAGE_TYPES_HELP,
+} from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +36,13 @@ export async function POST(request: Request) {
   if (!imagen) {
     return NextResponse.json({ error: "Falta la imagen" }, { status: 400 });
   }
-  if (!imagen.type.startsWith("image/")) {
+  // Allowlist por MIME: el nombre del fichero lo controla el cliente y esta
+  // ruta sube con service_role. Además deja fuera image/svg+xml, que en un
+  // bucket público ejecutaría su JS embebido.
+  const ext = safeImageExtension(imagen.type);
+  if (!ext) {
     return NextResponse.json(
-      { error: "El archivo debe ser una imagen" },
+      { error: `El archivo debe ser una imagen (${IMAGE_TYPES_HELP})` },
       { status: 400 },
     );
   }
@@ -45,7 +54,6 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  const ext = (imagen.name.split(".").pop() || "png").toLowerCase();
   const path = `${session.userId}.${ext}`;
   try {
     const buffer = Buffer.from(await imagen.arrayBuffer());
@@ -100,11 +108,7 @@ export async function DELETE() {
   const admin = createAdminClient();
   await admin.storage
     .from(BUCKET)
-    .remove(
-      ["png", "jpg", "jpeg", "webp", "gif"].map(
-        (e) => `${session.userId}.${e}`,
-      ),
-    );
+    .remove(IMAGE_EXTENSIONS.map((e) => `${session.userId}.${e}`));
 
   const { error } = await admin
     .from("portal_users")

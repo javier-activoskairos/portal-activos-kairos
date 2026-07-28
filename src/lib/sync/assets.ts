@@ -138,20 +138,27 @@ async function fetchAndUpsert(admin: Admin) {
 
   let rowsRead = 0;
   let rowsUpserted = 0;
+  // Empresas que se han saltado. Se propagan al resultado para que el panel de
+  // sincronización no muestre "Correcto" cuando parte del trabajo no se hizo.
+  const failures: string[] = [];
 
   // Multi-empresa: recorre todas las empresas activas de la réplica.
   for (const company of companies) {
     const companyId = company.id;
     const companyNotionId = company.notion_id;
 
-    // Tareas por activo (best-effort; si la integración no ve Tareas, quedan []).
-    let tasksByAsset = new Map<string, Task[]>();
+    // Tareas por activo. Si la lectura falla NO se puede continuar: el upsert
+    // de abajo escribe `tasks` siempre, así que un mapa vacío borraría el
+    // checklist de todos los activos de la empresa — y la sync lo reportaría
+    // como éxito. Se salta la empresa y se reintenta en la siguiente pasada.
+    let tasksByAsset: Map<string, Task[]>;
     try {
       tasksByAsset = await fetchTasksByAsset(notion, companyNotionId);
     } catch (e) {
-      console.error(
-        `Tareas no disponibles (${companyNotionId}): ${(e as Error).message}`,
-      );
+      const msg = (e as Error).message;
+      console.error(`Tareas no disponibles (${companyNotionId}): ${msg}`);
+      failures.push(`${companyNotionId}: tareas (${msg})`);
+      continue;
     }
 
     // Reconciliación completa cada noche → escaneo total de la empresa.
@@ -193,23 +200,40 @@ async function fetchAndUpsert(admin: Admin) {
 
     // Reconciliación: elimina de la réplica los activos de la empresa que ya
     // no son visibles (cambiaron de estado o se borraron en Notion).
+    //
+    // Guarda de resultado vacío: si el escaneo no devolvió NINGÚN activo
+    // visible, `stale` sería la lista completa y borraríamos todos los activos
+    // de la empresa a partir de un fallo transitorio de Notion. Una empresa que
+    // de verdad se queda a cero se limpia en la siguiente pasada con datos.
+    if (visibleIds.length === 0) continue;
+
     const { data: existing, error: selErr } = await admin
       .from("assets")
       .select("notion_id")
       .eq("company_id", companyId);
     if (selErr) throw new Error(`Select assets: ${selErr.message}`);
 
+    const visibleSet = new Set(visibleIds);
     const stale = (existing ?? [])
       .map((r: { notion_id: string }) => r.notion_id)
-      .filter((id: string) => !visibleIds.includes(id));
+      .filter((id: string) => !visibleSet.has(id));
 
     if (stale.length > 0) {
       const { error: delErr } = await admin
         .from("assets")
         .delete()
+        // Acotado por empresa: el borrado nunca debe poder salirse del ámbito
+        // que se acaba de escanear.
+        .eq("company_id", companyId)
         .in("notion_id", stale);
       if (delErr) throw new Error(`Delete stale assets: ${delErr.message}`);
     }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Activos sincronizados parcialmente (${rowsUpserted} filas). Empresas omitidas → ${failures.join("; ")}`,
+    );
   }
 
   return { rowsRead, rowsUpserted };

@@ -45,9 +45,17 @@ export interface ClientRow {
   users: { id: string; email: string; name: string; billing: boolean }[];
 }
 
+// Debe cubrir TODAS las fuentes de PARTIAL_SOURCES: las que faltaban salían en
+// el historial en inglés crudo ("meetings", "memberships"…).
 const SOURCE_LABEL: Record<string, string> = {
   incidents: "Incidencias",
   assets: "Activos",
+  tasks: "Tareas",
+  meetings: "Reuniones",
+  companies: "Empresas",
+  contacts: "Contactos",
+  memberships: "Membresías",
+  invoices: "Facturas",
 };
 const MODE_LABEL: Record<string, string> = {
   scheduled: "Programado",
@@ -500,7 +508,7 @@ export function AdminView({
                     className={
                       pickedCompany
                         ? "text-brand-accent"
-                        : "text-muted-foreground/50"
+                        : "text-muted-foreground"
                     }
                   >
                     2 · Contacto

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getPortalDb } from "@/lib/session";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { buildInvoicePdf } from "@/lib/invoice-pdf";
+import { safeFileName } from "@/lib/uploads";
+import { DISPLAY_TIME_ZONE } from "@/lib/status";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +14,7 @@ function fmtDate(d: string | null): string {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: DISPLAY_TIME_ZONE,
   });
 }
 
@@ -26,12 +30,21 @@ export async function GET(
   }
   const { session, db, companyId } = ctx;
 
-  const { data: invoice } = await db
+  const { data: invoice, error } = await db
     .from("invoices")
-    .select("number, concept, amount, currency, issued_at, pdf_url")
+    .select("number, concept, amount, currency, issued_at, pdf_path")
     .eq("id", id)
     .eq("company_id", companyId)
     .maybeSingle();
+  // Un fallo de BD no es un 404: distinguirlos evita que el cliente crea que su
+  // factura ha desaparecido y deje de reintentar.
+  if (error) {
+    console.error(`[facturas:pdf] ${id}`, error.message);
+    return NextResponse.json(
+      { error: "No hemos podido recuperar la factura. Inténtalo de nuevo." },
+      { status: 500 },
+    );
+  }
   if (!invoice) {
     return NextResponse.json(
       { error: "Factura no encontrada" },
@@ -41,26 +54,18 @@ export async function GET(
 
   // El identificador visible de la factura (p. ej. F2026-0030) suele venir en
   // "concept"; "number" puede estar vacío.
-  const safeName = (invoice.number || invoice.concept || "factura")
-    .replace(/[^\w.-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const safeName = safeFileName(invoice.number || invoice.concept, "factura");
 
-  // Si la factura tiene un PDF real re-hospedado en Supabase, lo servimos desde
-  // NUESTRO origen (mismo dominio): así no hay redirect ni petición cross-origin
-  // que navegadores como Brave bloquean. Fetch server-to-server con User-Agent
-  // de navegador para no toparse con el bot-check de Cloudflare.
-  if (invoice.pdf_url) {
-    try {
-      const upstream = await fetch(invoice.pdf_url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-          Accept: "application/pdf,*/*",
-        },
-        cache: "no-store",
-      });
-      if (!upstream.ok) throw new Error(`upstream ${upstream.status}`);
-      const buf = Buffer.from(await upstream.arrayBuffer());
+  // El bucket invoice-pdfs es privado: se descarga con service_role y se sirve
+  // desde NUESTRO origen. Así el control de acceso de arriba es el único camino
+  // (y de paso no hay redirect cross-origin, que Brave bloquea en descargas).
+  if (invoice.pdf_path) {
+    const admin = createAdminClient();
+    const { data: blob, error: dlErr } = await admin.storage
+      .from("invoice-pdfs")
+      .download(invoice.pdf_path);
+    if (!dlErr && blob) {
+      const buf = Buffer.from(await blob.arrayBuffer());
       return new NextResponse(new Uint8Array(buf), {
         headers: {
           "Content-Type": "application/pdf",
@@ -69,11 +74,12 @@ export async function GET(
           "Cache-Control": "no-store",
         },
       });
-    } catch {
-      const u = new URL(invoice.pdf_url);
-      u.searchParams.set("download", `${safeName}.pdf`);
-      return NextResponse.redirect(u.toString());
     }
+    // Si el objeto no está disponible se cae al PDF generado de abajo.
+    console.error(
+      `[facturas:pdf] descarga ${invoice.pdf_path}`,
+      dlErr?.message,
+    );
   }
 
   const pdf = buildInvoicePdf({
@@ -87,7 +93,7 @@ export async function GET(
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${invoice.number}.pdf"`,
+      "Content-Disposition": `attachment; filename="${safeName}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

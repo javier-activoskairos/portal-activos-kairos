@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getPortalDb } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeImageExtension, IMAGE_TYPES_HELP } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const { session, db, companyId } = ctx;
+  // Mismo motivo que en el alta: en previsualización getPortalDb() da un
+  // cliente service_role sobre la empresa del cliente. Escribir aquí crearía
+  // movimientos reales en su Notion a nombre del admin.
+  if (session.viewingAs) {
+    return NextResponse.json(
+      { error: "No puedes reabrir incidencias en modo previsualización" },
+      { status: 403 },
+    );
+  }
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
@@ -36,10 +46,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  let imagenExt: string | null = null;
   if (imagen) {
-    if (!imagen.type.startsWith("image/")) {
+    imagenExt = safeImageExtension(imagen.type);
+    if (!imagenExt) {
       return NextResponse.json(
-        { error: "El adjunto debe ser una imagen" },
+        { error: `El adjunto debe ser una imagen (${IMAGE_TYPES_HELP})` },
         { status: 400 },
       );
     }
@@ -52,12 +64,21 @@ export async function POST(request: Request) {
   }
 
   // La incidencia debe pertenecer a la empresa de la sesión.
-  const { data: incident } = await db
+  const { data: incident, error: incErr } = await db
     .from("incidents")
     .select("notion_id")
     .eq("id", incidentId)
     .eq("company_id", companyId)
     .maybeSingle();
+  // Un fallo de BD no es "no encontrada": devolver 404 hace creer al usuario
+  // que la incidencia se ha borrado y que no tiene sentido reintentar.
+  if (incErr) {
+    console.error(`[incidencias:reabrir] ${incidentId}`, incErr.message);
+    return NextResponse.json(
+      { error: "No hemos podido comprobar la incidencia. Inténtalo de nuevo." },
+      { status: 500 },
+    );
+  }
   if (!incident) {
     return NextResponse.json(
       { error: "Incidencia no encontrada" },
@@ -79,8 +100,8 @@ export async function POST(request: Request) {
   if (imagen) {
     try {
       const admin = createAdminClient();
-      const ext = (imagen.name.split(".").pop() || "png").toLowerCase();
-      const path = `${companyId}/${randomUUID()}.${ext}`;
+      // La extensión sale del MIME validado, nunca del nombre del fichero.
+      const path = `${companyId}/${randomUUID()}.${imagenExt}`;
       const buffer = Buffer.from(await imagen.arrayBuffer());
       const up = await admin.storage
         .from("incident-uploads")

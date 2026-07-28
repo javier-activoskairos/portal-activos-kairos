@@ -50,12 +50,54 @@ export async function runSync(
   }
 
   const lockUntil = new Date(Date.now() + 9 * 60 * 1000).toISOString();
+
+  if (state) {
+    // Adquisición condicional: la comprobación de arriba es read-then-write y
+    // hay dos relojes disparando syncs (cron de Render y GitHub Actions vía
+    // n8n). Este UPDATE solo toca la fila si el lock sigue libre, así que de
+    // dos ejecuciones simultáneas exactamente una recibe fila y continúa.
+    const { data: acquired } = await admin
+      .from("sync_state")
+      .update({ locked_until: lockUntil })
+      .eq("source", source)
+      .or(`locked_until.is.null,locked_until.lt.${nowIso}`)
+      .select("source");
+    if (!acquired || acquired.length === 0) {
+      return {
+        source,
+        status: "skipped",
+        rowsRead: 0,
+        rowsUpserted: 0,
+        error: "locked",
+      };
+    }
+  } else {
+    await admin.from("sync_state").insert({ source, locked_until: lockUntil });
+  }
+
+  // Un job matado por timeout (el de GitHub corta a los 8 min) deja su fila en
+  // "running" para siempre y el panel de admin, que solo mira "error", seguiría
+  // diciendo "Todo sincronizado". Se cierran como error los runs colgados.
+  const stuckBefore = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   await admin
-    .from("sync_state")
-    .upsert(
-      { source, locked_until: lockUntil },
-      { onConflict: "source", ignoreDuplicates: false },
-    );
+    .from("sync_runs")
+    .update({
+      status: "error",
+      finished_at: nowIso,
+      error_summary: "Ejecución interrumpida (sin finalizar)",
+    })
+    .eq("source", source)
+    .eq("status", "running")
+    .lt("started_at", stuckBefore);
+
+  // Marca de la que partirá el PRÓXIMO run incremental. Se toma ANTES de
+  // ejecutar fn, no después: el filtro `last_edited_time >= since` se aplica al
+  // principio, así que si sellásemos la hora de finalización todo lo editado en
+  // Notion mientras la sync corría quedaría por debajo del corte y no volvería
+  // a entrar nunca. El margen de solape cubre además el desfase de reloj entre
+  // Notion y nosotros; reprocesar unas filas es idempotente (upsert).
+  const OVERLAP_MS = 2 * 60 * 1000;
+  const watermarkIso = new Date(Date.now() - OVERLAP_MS).toISOString();
 
   const { data: runRow } = await admin
     .from("sync_runs")
@@ -83,7 +125,7 @@ export async function runSync(
     }
     await admin
       .from("sync_state")
-      .update({ last_success_at: finishedIso, locked_until: null })
+      .update({ last_success_at: watermarkIso, locked_until: null })
       .eq("source", source);
 
     return { source, status: "success", rowsRead, rowsUpserted, since };

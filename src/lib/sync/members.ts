@@ -66,7 +66,8 @@ export interface MemberPlanItem {
  * Reglas de admisión:
  *  - La empresa tiene membresía activa (Tempo o Stasis): "Membresía" con
  *    relación, o "Es Tempo?" = true.
- *  - El contacto está "Activo" y tiene el rol "Avans" O "Facturación".
+ *  - El contacto es real (no marcado "Excluir") y tiene el rol "Avans" O
+ *    "Facturación".
  *  - El rol "Facturación" (checkbox) concede `can_manage_company`
  *    (podrá cambiar la configuración de su empresa).
  *
@@ -98,10 +99,16 @@ export async function syncPortalMembers({
     });
   }
 
-  // 2) Contactos "Activo" con rol "Avans" o "Facturación".
+  // 2) Contactos reales con rol "Avans" o "Facturación".
+  //
+  // La reestructuración de [AKC] - Contactos (30-jul-2026) eliminó la propiedad
+  // "Estado" (Activo/Obsoleto): filtrar por ella devolvía un validation_error de
+  // Notion y tumbaba la sync entera. El único descarte que queda en la BBDD es
+  // "Excluir" (contactos no reales: pruebas, buzones ficticios), así que ese es
+  // ahora el criterio.
   const contacts = await queryAll(notion, CONTACTOS_DB, {
     and: [
-      { property: "Estado", status: { equals: "Activo" } },
+      { property: "Excluir", checkbox: { equals: false } },
       {
         or: [
           { property: "Avans", checkbox: { equals: true } },

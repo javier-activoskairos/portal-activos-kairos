@@ -42,6 +42,9 @@ export default async function PortalLayout({
     ? va.displayName
     : [me?.first_name, me?.last_name].filter(Boolean).join(" ") || null;
   const navAvatar = va ? va.avatarUrl : (me?.avatar_url ?? null);
+  // En "Ver como cliente" no se muestra nada interno (Sincronización): el
+  // portal se ve exactamente igual que lo ve el cliente.
+  const showInternal = session.role === "admin" && !va;
 
   return (
     <div className="bg-background min-h-screen">
@@ -51,25 +54,25 @@ export default async function PortalLayout({
         avatarUrl={navAvatar}
         companyName={session.companyName}
         logoUrl={session.logoUrl}
-        isAdmin={session.role === "admin"}
+        isAdmin={showInternal}
         canBilling={session.canManageCompany}
         custodianUserIds={session.custodianUserIds}
         openIncidents={openIncidents ?? 0}
       />
       <main className="transition-[margin] duration-200 min-[900px]:ml-[var(--kp-sidebar-w,244px)]">
-        {session.viewingAs && (
-          <div className="bg-brand text-brand-foreground sticky top-0 z-30 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-2 text-center text-[13px] font-medium min-[900px]:top-0">
-            <span>
-              Vista de cliente ·{" "}
-              <span className="font-bold">{session.viewingAs.companyName}</span>{" "}
-              — es solo lectura
+        {/* Vista de cliente: píldora flotante, no una barra. Así el portal se
+            renderiza exactamente igual que lo ve el cliente. */}
+        {va && (
+          <div className="fixed right-4 bottom-4 z-50 flex items-center gap-2.5 rounded-full bg-[rgba(15,12,9,0.88)] py-1.5 pr-1.5 pl-4 text-[12.5px] font-medium text-white shadow-[var(--shadow-lg)] backdrop-blur-md">
+            <span className="whitespace-nowrap">
+              Vista de <span className="font-bold">{va.companyName}</span>
             </span>
             <form action={exitViewAs}>
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[12.5px] font-semibold transition-colors hover:bg-white/30"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 font-semibold whitespace-nowrap transition-colors hover:bg-white/30"
               >
-                <IconLogout width={14} height={14} /> Salir de la vista
+                <IconLogout width={13} height={13} /> Salir
               </button>
             </form>
           </div>

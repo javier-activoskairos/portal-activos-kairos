@@ -20,6 +20,7 @@ import {
   IconPlus,
   IconSettings,
   IconTemple,
+  IconToolbox,
 } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MeetingModal } from "@/components/meeting-modal";
@@ -41,6 +42,17 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/incidencias", label: "Incidencias", icon: IconAlert },
   { href: "/facturacion", label: "Facturación", icon: IconBilling },
   { href: "/chat", label: "Chat", icon: IconChat, soon: true },
+];
+
+/** Sección "Recursos": páginas transversales, iguales para todos los clientes. */
+const RESOURCE_ITEMS: (NavItem & { external?: boolean })[] = [
+  { href: "/herramientas", label: "Herramientas", icon: IconToolbox },
+  {
+    href: "/memento-mori",
+    label: "Memento Mori",
+    icon: IconHourglass,
+    external: true,
+  },
 ];
 
 const SIDEBAR_W = 244;
@@ -125,10 +137,11 @@ export function PortalNav({
     pathname === href || pathname.startsWith(href + "/");
 
   // Clase de fila de navegación (icono + etiqueta), centrada si está colapsada.
+  // Compacta: el menú es un índice, no el protagonista de la pantalla.
   const rowCls = (active: boolean, muted = false) =>
     cn(
-      "flex w-full items-center rounded-xl text-[14.5px] transition-colors",
-      collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
+      "flex w-full items-center rounded-[10px] text-[13.5px] transition-colors",
+      collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-2.5 py-[7px]",
       active
         ? "bg-accent text-brand-accent font-semibold"
         : muted
@@ -136,12 +149,19 @@ export function PortalNav({
           : "text-muted-foreground hover:text-foreground font-medium",
     );
 
+  // Rótulo de sección ("Recursos", "Acciones").
+  const sectionCls =
+    "text-muted-foreground px-2 pt-1 pb-1 text-[10px] font-bold tracking-[0.1em] uppercase";
+
   return (
     <>
       {/* ---------- Sidebar fija (desktop ≥900px) ---------- */}
       <aside
         className="portal-sidebar-glow border-border bg-card fixed inset-y-0 left-0 z-40 hidden flex-col gap-1 border-r py-[22px] transition-[width] duration-200 min-[900px]:flex"
-        style={{ width: collapsed ? 76 : SIDEBAR_W, paddingInline: collapsed ? 12 : 16 }}
+        style={{
+          width: collapsed ? 76 : SIDEBAR_W,
+          paddingInline: collapsed ? 12 : 16,
+        }}
       >
         {/* Botón colapsar/expandir en el borde */}
         <button
@@ -187,7 +207,7 @@ export function PortalNav({
           <span className="bg-border h-px flex-1" />
         </div>
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = !item.soon && isActive(item.href);
@@ -199,7 +219,7 @@ export function PortalNav({
                   title={collapsed ? `${item.label} · Pronto` : undefined}
                   className={rowCls(isActive(item.href))}
                 >
-                  <Icon />
+                  <Icon width={17} height={17} />
                   {!collapsed && (
                     <>
                       {item.label}
@@ -216,40 +236,41 @@ export function PortalNav({
                 title={collapsed ? item.label : undefined}
                 className={rowCls(active)}
               >
-                <Icon />
+                <Icon width={17} height={17} />
                 {!collapsed && item.label}
               </Link>
             );
           })}
 
-          {/* Divisor + subpágina Memento Mori */}
+          {/* ---- Sección Recursos ---- */}
           <span className="bg-border my-2 h-px w-full" />
-          <Link
-            href="/memento-mori"
-            title={collapsed ? "Memento Mori" : undefined}
-            className={cn(
-              rowCls(isActive("/memento-mori")),
-              "text-[13.5px]",
-              !collapsed && "pl-[22px]",
-            )}
-          >
-            <IconHourglass />
-            {!collapsed && (
-              <>
-                Memento Mori
-                <IconExternal className="text-muted-foreground ml-auto" />
-              </>
-            )}
-          </Link>
+          {!collapsed && <span className={sectionCls}>Recursos</span>}
+          {RESOURCE_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                className={rowCls(isActive(item.href))}
+              >
+                <Icon width={17} height={17} />
+                {!collapsed && (
+                  <>
+                    {item.label}
+                    {item.external && (
+                      <IconExternal className="text-muted-foreground ml-auto" />
+                    )}
+                  </>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="mt-auto flex flex-col gap-3">
           {/* CTAs del portal — en el menú lateral (como el diseño) */}
-          {!collapsed && (
-            <span className="text-muted-foreground px-2 pb-0.5 text-[10.5px] font-bold tracking-[0.08em] uppercase">
-              Acciones
-            </span>
-          )}
+          {!collapsed && <span className={sectionCls}>Acciones</span>}
           <button
             type="button"
             onClick={() => setMeetingOpen(true)}
@@ -294,7 +315,9 @@ export function PortalNav({
               title={collapsed ? "Sincronización (interno)" : undefined}
               className={cn(
                 "flex w-full items-center rounded-xl text-[12.5px] transition-colors",
-                collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5",
+                collapsed
+                  ? "justify-center px-0 py-2.5"
+                  : "gap-2.5 px-3 py-2.5",
                 isActive("/admin")
                   ? "bg-accent text-brand-accent font-semibold"
                   : "text-muted-foreground hover:text-foreground font-medium",
@@ -457,6 +480,24 @@ export function PortalNav({
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] whitespace-nowrap transition-colors",
                   active
+                    ? "bg-accent text-brand-accent font-semibold"
+                    : "text-muted-foreground hover:text-foreground font-medium",
+                )}
+              >
+                <Icon width={16} height={16} /> {item.label}
+              </Link>
+            );
+          })}
+          {/* Recursos — mismas entradas que la sidebar */}
+          {RESOURCE_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] whitespace-nowrap transition-colors",
+                  isActive(item.href)
                     ? "bg-accent text-brand-accent font-semibold"
                     : "text-muted-foreground hover:text-foreground font-medium",
                 )}

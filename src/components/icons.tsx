@@ -265,6 +265,16 @@ export function IconHourglass({ width = 16, height = 16, ...p }: IconProps) {
   );
 }
 
+export function IconToolbox({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>
+      <path d="M3 9.5h18V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5Z" />
+      <path d="M8.5 9.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3.5" />
+      <path d="M3 14h18M10 12.5v3M14 12.5v3" />
+    </svg>
+  );
+}
+
 export function IconExternal({ width = 14, height = 14, ...p }: IconProps) {
   return (
     <svg

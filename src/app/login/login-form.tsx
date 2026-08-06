@@ -129,8 +129,11 @@ export function LoginForm() {
               className="text-brand-accent mt-px shrink-0"
             />
             <span>
-              El código <span className="text-foreground font-semibold">caduca en 5 minutos</span>.
-              Si expira, pide uno nuevo.
+              El código{" "}
+              <span className="text-foreground font-semibold">
+                caduca en 5 minutos
+              </span>
+              . Si expira, pide uno nuevo.
             </span>
           </p>
 

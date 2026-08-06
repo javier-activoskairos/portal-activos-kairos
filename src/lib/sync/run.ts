@@ -124,7 +124,8 @@ export async function resolveCompanyId(admin: Admin): Promise<string> {
     .eq("notion_id", notionId)
     .maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error(`Empresa no encontrada para notion_id ${notionId}`);
+  if (!data)
+    throw new Error(`Empresa no encontrada para notion_id ${notionId}`);
   return data.id;
 }
 
@@ -143,7 +144,5 @@ export async function getActiveCompanies(admin: Admin): Promise<CompanyRef[]> {
     .select("id, notion_id")
     .eq("active", true);
   if (error) throw error;
-  return (data ?? []).filter(
-    (c): c is CompanyRef => Boolean(c.notion_id),
-  );
+  return (data ?? []).filter((c): c is CompanyRef => Boolean(c.notion_id));
 }

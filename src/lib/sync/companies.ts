@@ -91,7 +91,9 @@ export async function syncMemberships() {
 
   let updated = 0;
   for (const c of companies ?? []) {
-    const b = c.notion_id ? byEmpresa.get(normalizeId(c.notion_id)!) : undefined;
+    const b = c.notion_id
+      ? byEmpresa.get(normalizeId(c.notion_id)!)
+      : undefined;
     if (!b) continue;
 
     // Racha de la membresía (semanas desde Inicio Tempo).
@@ -99,7 +101,8 @@ export async function syncMemberships() {
       .from("companies")
       .update({ plan_streak_weeks: b.streak })
       .eq("id", c.id);
-    if (upC.error) console.error(`[sync:memberships] racha ${c.id}`, upC.error.message);
+    if (upC.error)
+      console.error(`[sync:memberships] racha ${c.id}`, upC.error.message);
 
     if (!b.amount && !b.cycle && !b.next) continue;
     const up = await admin.from("company_billing").upsert(
@@ -118,7 +121,11 @@ export async function syncMemberships() {
     }
     updated++;
   }
-  return { status: "success" as const, memberships: memberships.length, updated };
+  return {
+    status: "success" as const,
+    memberships: memberships.length,
+    updated,
+  };
 }
 
 /**
@@ -278,17 +285,15 @@ export async function syncCompanies() {
         .map((u: any) => u?.id)
         .filter(Boolean);
 
-      const patch: Record<
-        string,
-        string | boolean | number | null | string[]
-      > = {
-        plan: derivePlan(props),
-        sector: props?.["Sector"]?.select?.name ?? null,
-        estado,
-        // Es o ha sido cliente: Estado Cliente, o con membresía, o Es Tempo.
-        is_client: estado === "Cliente" || esTempo || tieneMembresia,
-        custodian_user_ids: custodios,
-      };
+      const patch: Record<string, string | boolean | number | null | string[]> =
+        {
+          plan: derivePlan(props),
+          sector: props?.["Sector"]?.select?.name ?? null,
+          estado,
+          // Es o ha sido cliente: Estado Cliente, o con membresía, o Es Tempo.
+          is_client: estado === "Cliente" || esTempo || tieneMembresia,
+          custodian_user_ids: custodios,
+        };
 
       // Logo (opcional): descargar y re-hospedar si existe.
       const files = props?.["Logo"]?.files ?? [];

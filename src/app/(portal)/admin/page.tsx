@@ -31,7 +31,9 @@ export default async function AdminPage() {
     admin.from("incidents").select("id", { count: "exact", head: true }),
     admin
       .from("portal_users")
-      .select("id, company_id, email, first_name, last_name, can_manage_company")
+      .select(
+        "id, company_id, email, first_name, last_name, can_manage_company",
+      )
       .eq("role", "client")
       .eq("active", true),
   ]);
@@ -52,11 +54,13 @@ export default async function AdminPage() {
 
   // Estado global = ninguna fuente con la última ejecución en error.
   const latestPerSource = new Map<string, RunRow>();
-  for (const r of runs) if (!latestPerSource.has(r.source)) latestPerSource.set(r.source, r);
+  for (const r of runs)
+    if (!latestPerSource.has(r.source)) latestPerSource.set(r.source, r);
   const statusOk = ![...latestPerSource.values()].some(
     (r) => r.status === "error",
   );
-  const lastError = runs.find((r) => r.status === "error")?.error_summary ?? null;
+  const lastError =
+    runs.find((r) => r.status === "error")?.error_summary ?? null;
 
   const totalRecords = (assetsCount ?? 0) + (incidentsCount ?? 0);
   const rowsRead = runs[0]?.rows_read ?? totalRecords;
@@ -83,7 +87,11 @@ export default async function AdminPage() {
         .select("id, name, logo_url")
         .in("id", companyIds)
     : {
-        data: [] as { id: string; name: string | null; logo_url: string | null }[],
+        data: [] as {
+          id: string;
+          name: string | null;
+          logo_url: string | null;
+        }[],
       };
   const compById = new Map(
     (comps ?? []).map((c) => [

@@ -249,32 +249,28 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   const reopenInc = byId(reopenId);
   const verifyInc = byId(verifyId);
 
-  const abiertas = useMemo(
-    () => incidents.filter(isOpen),
-    [incidents],
-  );
-  const porVerificar = useMemo(
-    () => incidents.filter(isVerify),
-    [incidents],
-  );
+  const abiertas = useMemo(() => incidents.filter(isOpen), [incidents]);
+  const porVerificar = useMemo(() => incidents.filter(isVerify), [incidents]);
   const resueltas = useMemo(() => {
     const q = resueltasQuery.trim().toLowerCase();
-    return incidents
-      .filter((i) => {
-        if (!isResolved(i)) return false;
-        if (!q) return true;
-        return (
-          i.title.toLowerCase().includes(q) ||
-          (i.response ?? "").toLowerCase().includes(q) ||
-          (i.label ?? "").toLowerCase().includes(q)
-        );
-      })
-      // Por fecha fin descendente; las que no la tienen, al final.
-      .sort((a, b) => {
-        const ta = a.resolved_at ? Date.parse(a.resolved_at) : -Infinity;
-        const tb = b.resolved_at ? Date.parse(b.resolved_at) : -Infinity;
-        return tb - ta;
-      });
+    return (
+      incidents
+        .filter((i) => {
+          if (!isResolved(i)) return false;
+          if (!q) return true;
+          return (
+            i.title.toLowerCase().includes(q) ||
+            (i.response ?? "").toLowerCase().includes(q) ||
+            (i.label ?? "").toLowerCase().includes(q)
+          );
+        })
+        // Por fecha fin descendente; las que no la tienen, al final.
+        .sort((a, b) => {
+          const ta = a.resolved_at ? Date.parse(a.resolved_at) : -Infinity;
+          const tb = b.resolved_at ? Date.parse(b.resolved_at) : -Infinity;
+          return tb - ta;
+        })
+    );
   }, [incidents, resueltasQuery]);
 
   const modals = (
@@ -321,7 +317,11 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
             {(
               [
                 { key: "abiertas", label: "Abiertas", n: abiertas.length },
-                { key: "verificar", label: "Por verificar", n: porVerificar.length },
+                {
+                  key: "verificar",
+                  label: "Por verificar",
+                  n: porVerificar.length,
+                },
               ] as const
             ).map((t) => (
               <button
@@ -349,9 +349,13 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
               sub="Todo está funcionando con normalidad."
             />
           ) : (
-            <div className="grid gap-3.5 min-[1100px]:grid-cols-4 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3">
+            <div className="grid gap-3.5 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1100px]:grid-cols-4">
               {abiertas.map((i) => (
-                <IncidentCard key={i.id} i={i} onOpen={() => setSelectedId(i.id)} />
+                <IncidentCard
+                  key={i.id}
+                  i={i}
+                  onOpen={() => setSelectedId(i.id)}
+                />
               ))}
             </div>
           )
@@ -361,7 +365,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
             sub="Cuando resolvamos algo, aquí podrás verificarlo y valorarlo."
           />
         ) : (
-          <div className="grid gap-3.5 min-[1100px]:grid-cols-4 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3">
+          <div className="grid gap-3.5 min-[760px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1100px]:grid-cols-4">
             {porVerificar.map((i) => (
               <div
                 key={i.id}
@@ -376,7 +380,10 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                     <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
                       {i.title}
                     </span>
-                    <StatusBadge label={i.status} spec={incidentBadge(i.status)} />
+                    <StatusBadge
+                      label={i.status}
+                      spec={incidentBadge(i.status)}
+                    />
                   </div>
                   <div className="text-muted-foreground text-[12px]">
                     {formatDate(i.created_at)}
@@ -484,13 +491,7 @@ function EmptyCard({ title, sub }: { title: string; sub: string }) {
   );
 }
 
-function IncidentCard({
-  i,
-  onOpen,
-}: {
-  i: IncidentRow;
-  onOpen: () => void;
-}) {
+function IncidentCard({ i, onOpen }: { i: IncidentRow; onOpen: () => void }) {
   return (
     <button
       type="button"

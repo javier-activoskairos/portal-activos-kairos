@@ -124,7 +124,11 @@ export async function syncAssetTasks() {
       tasksTotal += tasks.length;
     }
   }
-  return { status: "success" as const, assets: assetsTouched, tasks: tasksTotal };
+  return {
+    status: "success" as const,
+    assets: assetsTouched,
+    tasks: tasksTotal,
+  };
 }
 
 async function fetchAndUpsert(admin: Admin) {
@@ -145,7 +149,9 @@ async function fetchAndUpsert(admin: Admin) {
     try {
       tasksByAsset = await fetchTasksByAsset(notion, companyNotionId);
     } catch (e) {
-      console.error(`Tareas no disponibles (${companyNotionId}): ${(e as Error).message}`);
+      console.error(
+        `Tareas no disponibles (${companyNotionId}): ${(e as Error).message}`,
+      );
     }
 
     // Reconciliación completa cada noche → escaneo total de la empresa.
@@ -169,7 +175,10 @@ async function fetchAndUpsert(admin: Admin) {
       const visible = res.results
         .map((pg: any) => mapAsset(pg, companyId))
         .filter((a: any) => VISIBLE.has(a.status))
-        .map((a: any) => ({ ...a, tasks: tasksByAsset.get(a.notion_id) ?? [] }));
+        .map((a: any) => ({
+          ...a,
+          tasks: tasksByAsset.get(a.notion_id) ?? [],
+        }));
 
       if (visible.length > 0) {
         const { error } = await admin

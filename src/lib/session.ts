@@ -67,7 +67,9 @@ export async function getPortalSession(): Promise<PortalSession | null> {
 
   const { data: company } = await supabase
     .from("companies")
-    .select("name, logo_url, plan, sector, plan_streak_weeks, custodian_user_ids")
+    .select(
+      "name, logo_url, plan, sector, plan_streak_weeks, custodian_user_ids",
+    )
     .eq("id", pu.company_id)
     .maybeSingle();
 
@@ -113,7 +115,9 @@ export async function getPortalSession(): Promise<PortalSession | null> {
         // Usuario representativo de la empresa: impersonación completa.
         const { data: reps } = await admin
           .from("portal_users")
-          .select("id, email, contact_notion_id, first_name, last_name, avatar_url, can_manage_company")
+          .select(
+            "id, email, contact_notion_id, first_name, last_name, avatar_url, can_manage_company",
+          )
           .eq("company_id", tgt.id)
           .eq("active", true)
           .neq("role", "admin");

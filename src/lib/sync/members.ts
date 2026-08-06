@@ -35,7 +35,11 @@ async function ensureAuthUser(admin: any, email: string): Promise<boolean> {
   });
   if (!error) return true;
   const msg = `${error.message ?? ""} ${error.code ?? ""}`.toLowerCase();
-  if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+  if (
+    msg.includes("already") ||
+    msg.includes("registered") ||
+    msg.includes("exists")
+  ) {
     return false; // ya existía
   }
   throw error;

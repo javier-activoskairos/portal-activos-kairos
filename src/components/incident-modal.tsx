@@ -208,7 +208,7 @@ export function IncidentModal({
                   </div>
                 ) : (
                   <label
-                    className={`${fieldClass} text-muted-foreground flex cursor-pointer items-center gap-2 hover:border-brand/50`}
+                    className={`${fieldClass} text-muted-foreground hover:border-brand/50 flex cursor-pointer items-center gap-2`}
                   >
                     <span>Subir una captura o foto…</span>
                     <input

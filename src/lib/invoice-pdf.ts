@@ -15,17 +15,17 @@ export interface InvoicePdfData {
 const WIN1252_EXTRA: Record<string, number> = {
   "€": 0x80,
   "‚": 0x82,
-  "ƒ": 0x83,
+  ƒ: 0x83,
   "„": 0x84,
   "…": 0x85,
   "†": 0x86,
   "‡": 0x87,
-  "ˆ": 0x88,
+  ˆ: 0x88,
   "‰": 0x89,
-  "Š": 0x8a,
+  Š: 0x8a,
   "‹": 0x8b,
-  "Œ": 0x8c,
-  "Ž": 0x8e,
+  Œ: 0x8c,
+  Ž: 0x8e,
   "‘": 0x91,
   "’": 0x92,
   "“": 0x93,
@@ -34,11 +34,11 @@ const WIN1252_EXTRA: Record<string, number> = {
   "–": 0x96,
   "—": 0x97,
   "™": 0x99,
-  "š": 0x9a,
+  š: 0x9a,
   "›": 0x9b,
-  "œ": 0x9c,
-  "ž": 0x9e,
-  "Ÿ": 0x9f,
+  œ: 0x9c,
+  ž: 0x9e,
+  Ÿ: 0x9f,
 };
 
 /** Cadena PDF `(...)` codificada en Windows-1252, escapando ( ) \\. */
@@ -90,7 +90,11 @@ export function buildInvoicePdf(inv: InvoicePdfData): Buffer {
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
-    Buffer.concat([A(`<< /Length ${stream.length} >>\nstream\n`), stream, A("\nendstream")]),
+    Buffer.concat([
+      A(`<< /Length ${stream.length} >>\nstream\n`),
+      stream,
+      A("\nendstream"),
+    ]),
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
   ];
 

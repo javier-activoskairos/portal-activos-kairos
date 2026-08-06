@@ -100,7 +100,11 @@ export async function DELETE() {
   const admin = createAdminClient();
   await admin.storage
     .from(BUCKET)
-    .remove(["png", "jpg", "jpeg", "webp", "gif"].map((e) => `${session.userId}.${e}`));
+    .remove(
+      ["png", "jpg", "jpeg", "webp", "gif"].map(
+        (e) => `${session.userId}.${e}`,
+      ),
+    );
 
   const { error } = await admin
     .from("portal_users")

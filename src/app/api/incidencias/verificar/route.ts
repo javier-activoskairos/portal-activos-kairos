@@ -28,10 +28,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Formato inválido" }, { status: 400 });
   }
   const incidentId = String(body.incidentId ?? "").trim();
-  const valoracion = Math.max(1, Math.min(5, Math.round(Number(body.valoracion) || 0)));
+  const valoracion = Math.max(
+    1,
+    Math.min(5, Math.round(Number(body.valoracion) || 0)),
+  );
   // Solo se guarda cuando la valoración es baja (≤ 3); se recorta por seguridad.
   const mejora =
-    valoracion <= 3 ? String(body.mejora ?? "").trim().slice(0, 1900) : "";
+    valoracion <= 3
+      ? String(body.mejora ?? "")
+          .trim()
+          .slice(0, 1900)
+      : "";
   if (!incidentId || valoracion < 1) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   }

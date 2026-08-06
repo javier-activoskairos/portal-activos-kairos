@@ -84,9 +84,7 @@ async function fetchAndUpsert(admin: Admin, since: string | null) {
   // Multi-empresa: sincroniza las incidencias de cada empresa activa.
   for (const company of companies) {
     const filter: any = {
-      and: [
-        { property: "Empresa", relation: { contains: company.notion_id } },
-      ],
+      and: [{ property: "Empresa", relation: { contains: company.notion_id } }],
     };
     if (since) {
       filter.and.push({
@@ -129,7 +127,9 @@ async function fetchAndUpsert(admin: Admin, since: string | null) {
     } while (cursor);
   }
 
-  console.log(`[sync:incidents] Supabase IDs escritos en Notion: ${idsWritten}`);
+  console.log(
+    `[sync:incidents] Supabase IDs escritos en Notion: ${idsWritten}`,
+  );
   return { rowsRead, rowsUpserted };
 }
 

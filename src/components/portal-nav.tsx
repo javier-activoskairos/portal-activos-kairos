@@ -149,9 +149,9 @@ export function PortalNav({
           : "text-muted-foreground hover:text-foreground font-medium",
     );
 
-  // Rótulo de sección ("Recursos", "Acciones").
+  // Rótulo de sección ("Recursos", "Acciones"): mismo tratamiento que "Bitácora de Rumbo".
   const sectionCls =
-    "text-muted-foreground px-2 pt-1 pb-1 text-[10px] font-bold tracking-[0.1em] uppercase";
+    "text-brand-accent px-2 pt-1 pb-1 font-mono text-[10px] font-bold tracking-[0.18em] uppercase";
 
   return (
     <>

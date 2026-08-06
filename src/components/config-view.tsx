@@ -82,8 +82,10 @@ export function ConfigView({
   const locked = readOnly;
   const companyEditable = canManageCompany && !readOnly;
 
-  const setPf = (k: keyof Profile, v: string) => setP((s) => ({ ...s, [k]: v }));
-  const setCf = (k: keyof Company, v: string) => setC((s) => ({ ...s, [k]: v }));
+  const setPf = (k: keyof Profile, v: string) =>
+    setP((s) => ({ ...s, [k]: v }));
+  const setCf = (k: keyof Company, v: string) =>
+    setC((s) => ({ ...s, [k]: v }));
 
   async function savePerfil() {
     setSavingP(true);
@@ -142,7 +144,10 @@ export function ConfigView({
     try {
       const fd = new FormData();
       fd.append("imagen", file);
-      const res = await fetch("/api/config/avatar", { method: "POST", body: fd });
+      const res = await fetch("/api/config/avatar", {
+        method: "POST",
+        body: fd,
+      });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Error");
       setAvatar(j.url);
@@ -197,11 +202,7 @@ export function ConfigView({
           >
             {avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatar}
-                alt=""
-                className="size-full object-cover"
-              />
+              <img src={avatar} alt="" className="size-full object-cover" />
             ) : (
               initials(p, email)
             )}
@@ -319,7 +320,9 @@ export function ConfigView({
             <span
               className={
                 "inline-flex items-center gap-1.5 text-[13px] font-medium " +
-                (stP.kind === "ok" ? "text-success-foreground" : "text-danger-foreground")
+                (stP.kind === "ok"
+                  ? "text-success-foreground"
+                  : "text-danger-foreground")
               }
             >
               {stP.kind === "ok" && <IconCheck width={15} height={15} />}
@@ -339,94 +342,96 @@ export function ConfigView({
 
       {/* ---------- EMPRESA (solo rol Facturación) ---------- */}
       {canManageCompany && (
-      <section className="border-border bg-card rounded-[22px] border p-6 shadow-[var(--shadow-sm)] sm:p-7">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-foreground text-[17px] font-bold tracking-tight">
-            Datos de la empresa
-          </h2>
-          <span className="bg-accent text-brand-accent inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-[0.08em] uppercase">
-            <IconBilling width={13} height={13} /> Acceso Facturación
-          </span>
-        </div>
-        <p className="text-muted-foreground mt-1.5 max-w-[64ch] text-[14px] leading-relaxed">
-          Datos fiscales que aparecen en tus facturas. Solo editables por
-          personas con acceso a Facturación.
-        </p>
+        <section className="border-border bg-card rounded-[22px] border p-6 shadow-[var(--shadow-sm)] sm:p-7">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-foreground text-[17px] font-bold tracking-tight">
+              Datos de la empresa
+            </h2>
+            <span className="bg-accent text-brand-accent inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-[0.08em] uppercase">
+              <IconBilling width={13} height={13} /> Acceso Facturación
+            </span>
+          </div>
+          <p className="text-muted-foreground mt-1.5 max-w-[64ch] text-[14px] leading-relaxed">
+            Datos fiscales que aparecen en tus facturas. Solo editables por
+            personas con acceso a Facturación.
+          </p>
 
-        <div className="mt-5 grid gap-4">
-          <Field label="Nombre fiscal">
-            <input
-              className={inputCls}
-              value={c.fiscalName}
-              disabled={!companyEditable}
-              onChange={(e) => setCf("fiscalName", e.target.value)}
-              placeholder="Activos Kairos"
-            />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="CIF / EIN">
+          <div className="mt-5 grid gap-4">
+            <Field label="Nombre fiscal">
               <input
                 className={inputCls}
-                value={c.taxId}
+                value={c.fiscalName}
                 disabled={!companyEditable}
-                onChange={(e) => setCf("taxId", e.target.value)}
-                placeholder="B12345678"
+                onChange={(e) => setCf("fiscalName", e.target.value)}
+                placeholder="Activos Kairos"
               />
             </Field>
-            <Field label="Código postal">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="CIF / EIN">
+                <input
+                  className={inputCls}
+                  value={c.taxId}
+                  disabled={!companyEditable}
+                  onChange={(e) => setCf("taxId", e.target.value)}
+                  placeholder="B12345678"
+                />
+              </Field>
+              <Field label="Código postal">
+                <input
+                  className={inputCls}
+                  value={c.postalCode}
+                  disabled={!companyEditable}
+                  onChange={(e) => setCf("postalCode", e.target.value)}
+                  placeholder="28001"
+                />
+              </Field>
+            </div>
+            <Field label="Dirección">
               <input
                 className={inputCls}
-                value={c.postalCode}
+                value={c.address}
                 disabled={!companyEditable}
-                onChange={(e) => setCf("postalCode", e.target.value)}
-                placeholder="28001"
+                onChange={(e) => setCf("address", e.target.value)}
+                placeholder="Calle, número, piso"
+              />
+            </Field>
+            <Field label="Ubicación (Localidad, Provincia / Estado)">
+              <input
+                className={inputCls}
+                value={c.city}
+                disabled={!companyEditable}
+                onChange={(e) => setCf("city", e.target.value)}
+                placeholder="Madrid, Comunidad de Madrid"
               />
             </Field>
           </div>
-          <Field label="Dirección">
-            <input
-              className={inputCls}
-              value={c.address}
-              disabled={!companyEditable}
-              onChange={(e) => setCf("address", e.target.value)}
-              placeholder="Calle, número, piso"
-            />
-          </Field>
-          <Field label="Ubicación (Localidad, Provincia / Estado)">
-            <input
-              className={inputCls}
-              value={c.city}
-              disabled={!companyEditable}
-              onChange={(e) => setCf("city", e.target.value)}
-              placeholder="Madrid, Comunidad de Madrid"
-            />
-          </Field>
-        </div>
 
-        {companyEditable && (
-          <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-            {stC && (
-              <span
-                className={
-                  "inline-flex items-center gap-1.5 text-[13px] font-medium " +
-                  (stC.kind === "ok" ? "text-success-foreground" : "text-danger-foreground")
-                }
+          {companyEditable && (
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+              {stC && (
+                <span
+                  className={
+                    "inline-flex items-center gap-1.5 text-[13px] font-medium " +
+                    (stC.kind === "ok"
+                      ? "text-success-foreground"
+                      : "text-danger-foreground")
+                  }
+                >
+                  {stC.kind === "ok" && <IconCheck width={15} height={15} />}
+                  {stC.msg}
+                </span>
+              )}
+              <button
+                type="button"
+                disabled={savingC}
+                onClick={saveEmpresa}
+                className="bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold shadow-[0_6px_18px_color-mix(in_oklch,var(--brand),transparent_70%)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {stC.kind === "ok" && <IconCheck width={15} height={15} />}
-                {stC.msg}
-              </span>
-            )}
-            <button
-              type="button"
-              disabled={savingC}
-              onClick={saveEmpresa}
-              className="bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold shadow-[0_6px_18px_color-mix(in_oklch,var(--brand),transparent_70%)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {savingC ? "Guardando…" : "Guardar datos fiscales"}
-            </button>
-          </div>
-        )}
-      </section>
+                {savingC ? "Guardando…" : "Guardar datos fiscales"}
+              </button>
+            </div>
+          )}
+        </section>
       )}
     </div>
   );

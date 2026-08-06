@@ -44,7 +44,10 @@ const ACOMP_HOURS: Record<string, number> = {
 const KPI_TONE = {
   blue: { fg: "text-blue-500", border: "border-blue-500/30" },
   amber: { fg: "text-amber-500", border: "border-amber-500/35" },
-  orange: { fg: "text-brand-accent", border: "border-[var(--brand-accent)]/35" },
+  orange: {
+    fg: "text-brand-accent",
+    border: "border-[var(--brand-accent)]/35",
+  },
   red: { fg: "text-red-500", border: "border-red-500/30" },
 } as const;
 
@@ -64,7 +67,6 @@ interface IncidentRow {
   created_at: string | null;
   resolved_at: string | null;
 }
-
 
 /** Devuelve las claves (año-mes) de los últimos `n` meses, del más antiguo al actual. */
 function lastMonths(n: number): { key: string; label: string }[] {
@@ -172,7 +174,9 @@ export default async function InicioPage() {
   // --- Gráfico B: incidencias por mes (por created_at), resueltas/abiertas ---
   const incidentsByMonth = months.map((m) => {
     const inMonth = incidents.filter((i) => monthKey(i.created_at) === m.key);
-    const resolvedItems = inMonth.filter((i) => i.resolved_at).map((i) => i.title);
+    const resolvedItems = inMonth
+      .filter((i) => i.resolved_at)
+      .map((i) => i.title);
     const openItems = inMonth.filter((i) => !i.resolved_at).map((i) => i.title);
     return {
       label: m.label,
@@ -211,7 +215,9 @@ export default async function InicioPage() {
 
   // --- Gráfico C: horas de acompañamiento por mes (Astrapi/Areté/Prótos) ---
   const meetingsByMonth = months.map((m) => {
-    const inMonth = meetings.filter((mt) => monthKey(mt.meeting_date) === m.key);
+    const inMonth = meetings.filter(
+      (mt) => monthKey(mt.meeting_date) === m.key,
+    );
     const astrapi = inMonth.filter((x) => x.type === "Astrapi").length;
     const arete = inMonth.filter((x) => x.type === "Areté").length;
     const protos = inMonth.filter((x) => x.type === "Prótos").length;
@@ -227,8 +233,18 @@ export default async function InicioPage() {
   });
   const hasProtos = meetingsByMonth.some((d) => d.protos > 0);
   const meetingsSeries: ChartSeries[] = [
-    { key: "astrapi", label: "Astrapi", barClass: "bg-brand", dotClass: "bg-brand" },
-    { key: "arete", label: "Areté", barClass: "bg-blue-500", dotClass: "bg-blue-500" },
+    {
+      key: "astrapi",
+      label: "Astrapi",
+      barClass: "bg-brand",
+      dotClass: "bg-brand",
+    },
+    {
+      key: "arete",
+      label: "Areté",
+      barClass: "bg-blue-500",
+      dotClass: "bg-blue-500",
+    },
     ...(hasProtos
       ? [
           {
@@ -344,8 +360,8 @@ export default async function InicioPage() {
                   {session.planStreakWeeks}
                 </div>
                 <div className="text-muted-foreground mt-1 text-[12.5px] font-semibold">
-                  {session.planStreakWeeks === 1 ? "semana" : "semanas"} de racha{" "}
-                  {streakKind}
+                  {session.planStreakWeeks === 1 ? "semana" : "semanas"} de
+                  racha {streakKind}
                 </div>
               </div>
             </div>

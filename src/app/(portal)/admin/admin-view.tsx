@@ -200,7 +200,9 @@ export function AdminView({
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   // Sincronización parcial: panel + fuente en curso.
   const [partialOpen, setPartialOpen] = useState(false);
-  const [runningSource, setRunningSource] = useState<PartialSource | null>(null);
+  const [runningSource, setRunningSource] = useState<PartialSource | null>(
+    null,
+  );
   const [partialMsg, setPartialMsg] = useState<string | null>(null);
 
   function syncOne(src: PartialSource, label: string) {
@@ -342,7 +344,7 @@ export function AdminView({
             </button>
 
             {partialOpen && (
-              <div className="mt-3 grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
+              <div className="mt-3 grid [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))] gap-2.5">
                 {PARTIAL_SOURCES.map((s) => {
                   const busy = runningSource === s.key;
                   return (
@@ -378,7 +380,7 @@ export function AdminView({
           </div>
 
           {/* Rejilla de stats */}
-          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+          <div className="grid [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))] gap-3">
             <StatCard title="Fuente" value="Activos · Incidencias" />
             <StatCard
               title="Modo"
@@ -486,7 +488,9 @@ export function AdminView({
                 <div className="text-muted-foreground mb-3 flex items-center gap-2 text-[12px] font-semibold">
                   <span
                     className={
-                      !pickedCompany ? "text-brand-accent" : "text-muted-foreground"
+                      !pickedCompany
+                        ? "text-brand-accent"
+                        : "text-muted-foreground"
                     }
                   >
                     1 · Empresa
@@ -494,7 +498,9 @@ export function AdminView({
                   <IconArrowRight />
                   <span
                     className={
-                      pickedCompany ? "text-brand-accent" : "text-muted-foreground/50"
+                      pickedCompany
+                        ? "text-brand-accent"
+                        : "text-muted-foreground/50"
                     }
                   >
                     2 · Contacto
@@ -640,16 +646,21 @@ export function AdminView({
             <table className="w-full min-w-[640px] border-collapse text-left text-sm">
               <thead>
                 <tr>
-                  {["Fuente", "Modo", "Estado", "Leídos", "Escritos", "Cuándo"].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="text-muted-foreground px-[18px] py-3.5 text-[11px] font-semibold tracking-[0.06em] uppercase"
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    "Fuente",
+                    "Modo",
+                    "Estado",
+                    "Leídos",
+                    "Escritos",
+                    "Cuándo",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="text-muted-foreground px-[18px] py-3.5 text-[11px] font-semibold tracking-[0.06em] uppercase"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -664,10 +675,7 @@ export function AdminView({
                   </tr>
                 ) : (
                   runs.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="border-border/60 border-t"
-                    >
+                    <tr key={r.id} className="border-border/60 border-t">
                       <td className="text-foreground px-[18px] py-3 font-medium">
                         {SOURCE_LABEL[r.source] ?? r.source}
                       </td>

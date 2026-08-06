@@ -19,13 +19,18 @@ export default async function ConfiguracionPage() {
     "first_name, last_name, phone, role_title, personal_email, birthday, avatar_url";
   const profileQuery = va?.portalUserId
     ? db.from("portal_users").select(profileCols).eq("id", va.portalUserId)
-    : db.from("portal_users").select(profileCols).eq("auth_user_id", session.userId);
+    : db
+        .from("portal_users")
+        .select(profileCols)
+        .eq("auth_user_id", session.userId);
 
   const [{ data: profile }, { data: company }] = await Promise.all([
     profileQuery.maybeSingle(),
     db
       .from("companies")
-      .select("notion_id, fiscal_name, tax_id, address, city, region, postal_code")
+      .select(
+        "notion_id, fiscal_name, tax_id, address, city, region, postal_code",
+      )
       .eq("id", companyId)
       .maybeSingle(),
   ]);

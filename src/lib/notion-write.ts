@@ -23,14 +23,18 @@ export async function updateNotionContact(
   },
 ) {
   const properties: Record<string, any> = {};
-  if (f.firstName !== undefined) properties["Nombre"] = { title: rich(f.firstName) };
-  if (f.lastName !== undefined) properties["Apellidos"] = { rich_text: rich(f.lastName) };
+  if (f.firstName !== undefined)
+    properties["Nombre"] = { title: rich(f.firstName) };
+  if (f.lastName !== undefined)
+    properties["Apellidos"] = { rich_text: rich(f.lastName) };
   if (f.phone !== undefined)
     properties["Teléfono"] = { phone_number: f.phone?.trim() || null };
-  if (f.roleTitle !== undefined) properties["Cargo"] = { rich_text: rich(f.roleTitle) };
+  if (f.roleTitle !== undefined)
+    properties["Cargo"] = { rich_text: rich(f.roleTitle) };
   if (f.personalEmail !== undefined)
     properties["Email personal"] = { email: f.personalEmail?.trim() || null };
-  if (f.birthday !== undefined) properties["Nacimiento"] = { date: dateProp(f.birthday) };
+  if (f.birthday !== undefined)
+    properties["Nacimiento"] = { date: dateProp(f.birthday) };
   if (f.avatarUrl !== undefined)
     properties["Imagen"] = {
       files: f.avatarUrl
@@ -56,11 +60,17 @@ export async function updateNotionCompany(
 ) {
   const properties: Record<string, any> = {};
   if (f.fiscalName !== undefined)
-    properties["Nombre Empresa Facturación"] = { rich_text: rich(f.fiscalName) };
-  if (f.taxId !== undefined) properties["CIF/EIN"] = { rich_text: rich(f.taxId) };
-  if (f.address !== undefined) properties["Dirección"] = { rich_text: rich(f.address) };
-  if (f.city !== undefined) properties["Localidad"] = { rich_text: rich(f.city) };
-  if (f.postalCode !== undefined) properties["CP"] = { rich_text: rich(f.postalCode) };
+    properties["Nombre Empresa Facturación"] = {
+      rich_text: rich(f.fiscalName),
+    };
+  if (f.taxId !== undefined)
+    properties["CIF/EIN"] = { rich_text: rich(f.taxId) };
+  if (f.address !== undefined)
+    properties["Dirección"] = { rich_text: rich(f.address) };
+  if (f.city !== undefined)
+    properties["Localidad"] = { rich_text: rich(f.city) };
+  if (f.postalCode !== undefined)
+    properties["CP"] = { rich_text: rich(f.postalCode) };
   await notionClient().pages.update({ page_id: pageId, properties } as any);
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

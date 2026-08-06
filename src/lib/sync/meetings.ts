@@ -68,7 +68,8 @@ export async function syncMeetings() {
     // Reconciliación por empresa: elimina los que ya no están.
     const keep = mapped.map((m) => m.notion_id);
     let del = admin.from("meetings").delete().eq("company_id", companyId);
-    if (keep.length > 0) del = del.not("notion_id", "in", `(${keep.join(",")})`);
+    if (keep.length > 0)
+      del = del.not("notion_id", "in", `(${keep.join(",")})`);
     const { error: delErr } = await del;
     if (delErr) throw delErr;
   }

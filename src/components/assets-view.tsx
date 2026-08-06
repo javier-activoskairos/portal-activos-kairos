@@ -491,7 +491,7 @@ export function AssetsView({ assets }: { assets: AssetRow[] }) {
             No hay activos en progreso ahora mismo.
           </p>
         ) : (
-          <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))]">
+          <div className="grid [grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-3.5">
             {inProgress.map((a) => (
               <AssetCard key={a.id} a={a} onOpen={() => setSelectedId(a.id)} />
             ))}

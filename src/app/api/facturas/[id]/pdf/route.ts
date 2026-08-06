@@ -33,7 +33,10 @@ export async function GET(
     .eq("company_id", companyId)
     .maybeSingle();
   if (!invoice) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   // El identificador visible de la factura (p. ej. F2026-0030) suele venir en

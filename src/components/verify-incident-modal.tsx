@@ -111,8 +111,8 @@ export function VerifyIncidentModal({
               ¡Gracias por tu valoración!
             </h2>
             <p className="text-muted-foreground mx-auto mt-1.5 mb-5 max-w-[42ch] text-sm leading-relaxed">
-              La incidencia queda marcada como resuelta. La verás en el bloque de
-              incidencias resueltas.
+              La incidencia queda marcada como resuelta. La verás en el bloque
+              de incidencias resueltas.
             </p>
             <button
               type="button"
@@ -183,7 +183,7 @@ export function VerifyIncidentModal({
                   rows={3}
                   maxLength={1900}
                   placeholder="Cuéntanos qué no salió como esperabas…"
-                  className="border-border bg-card text-foreground placeholder:text-muted-foreground/60 focus:border-brand w-full resize-none rounded-[13px] border p-3 text-[14px] leading-relaxed outline-none transition-colors"
+                  className="border-border bg-card text-foreground placeholder:text-muted-foreground/60 focus:border-brand w-full resize-none rounded-[13px] border p-3 text-[14px] leading-relaxed transition-colors outline-none"
                 />
               </div>
             )}

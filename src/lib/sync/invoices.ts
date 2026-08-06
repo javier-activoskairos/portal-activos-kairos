@@ -104,7 +104,10 @@ export async function syncInvoices() {
 
   // Nombres de Producto (concepto legible) para las facturas del portal.
   const productIds = rows
-    .map((r) => r.properties?.["Producto"]?.relation?.[0]?.id as string | undefined)
+    .map(
+      (r) =>
+        r.properties?.["Producto"]?.relation?.[0]?.id as string | undefined,
+    )
     .filter((id): id is string => !!id);
   const productNames = await resolveProductNames(notion, productIds);
 
@@ -122,7 +125,8 @@ export async function syncInvoices() {
     // En Notion el código de factura vive en "Concepto" (no hay "Nº Factura").
     const codigo = plainText(p["Concepto"]);
     const productId = p["Producto"]?.relation?.[0]?.id as string | undefined;
-    const concepto = (productId && productNames.get(productId)) || "Suscripción";
+    const concepto =
+      (productId && productNames.get(productId)) || "Suscripción";
     const pdfUrl = await rehostPdf(admin, page);
     const inv = {
       notion_id: page.id as string,
@@ -155,7 +159,8 @@ export async function syncInvoices() {
       .delete()
       .eq("company_id", companyId)
       .not("notion_id", "is", null);
-    if (keep.length > 0) del = del.not("notion_id", "in", `(${keep.join(",")})`);
+    if (keep.length > 0)
+      del = del.not("notion_id", "in", `(${keep.join(",")})`);
     const { error: delErr } = await del;
     if (delErr) throw delErr;
   }

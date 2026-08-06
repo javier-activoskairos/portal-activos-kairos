@@ -137,7 +137,20 @@ const DIAS_MES = 21,
   SEMANA_H = 40,
   RED_BUSQUEDA = 0.35,
   RED_MANUAL = 0.4;
-const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+const MESES = [
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
+];
 const MODES: Record<string, { busqueda: number; manual: number }> = {
   conservador: { busqueda: 0.5, manual: 0.5 },
   realista: { busqueda: 1, manual: 1 },
@@ -153,8 +166,7 @@ const eur = (n: number) =>
 const num = (n: number, d = 0) =>
   new Intl.NumberFormat("es-ES", { maximumFractionDigits: d }).format(n);
 // Etiqueta compacta para el eje Y (50.000 → "50 k €")
-const eurAxis = (n: number) =>
-  n >= 1000 ? `${num(n / 1000)} k €` : eur(n);
+const eurAxis = (n: number) => (n >= 1000 ? `${num(n / 1000)} k €` : eur(n));
 // Techo "redondo" para el eje (151.200 → 200.000)
 function niceMax(v: number): number {
   if (v <= 0) return 1;
@@ -224,7 +236,10 @@ export function MementoMoriCalculator() {
     manual,
     profundo,
   };
-  const r = useMemo(() => compute(v), [personas, costeHora, busqueda, manual, profundo]);
+  const r = useMemo(
+    () => compute(v),
+    [personas, costeHora, busqueda, manual, profundo],
+  );
 
   const activeMode =
     Object.entries(MODES).find(
@@ -268,9 +283,21 @@ export function MementoMoriCalculator() {
   // Antes/después
   const baCols = [
     { lab: "Actual", h: r.horasPerdidasMes, c: "var(--danger)" },
-    { lab: "Con fuente de verdad", h: r.horasPerdidasMes - r.busquedaRec, c: "var(--amber)" },
-    { lab: "Con automatización", h: r.horasPerdidasMes - r.manualRec, c: "var(--orange)" },
-    { lab: "Sistema inteligente", h: r.horasPerdidasMes - r.recuperablesMes, c: "var(--success)" },
+    {
+      lab: "Con fuente de verdad",
+      h: r.horasPerdidasMes - r.busquedaRec,
+      c: "var(--amber)",
+    },
+    {
+      lab: "Con automatización",
+      h: r.horasPerdidasMes - r.manualRec,
+      c: "var(--orange)",
+    },
+    {
+      lab: "Sistema inteligente",
+      h: r.horasPerdidasMes - r.recuperablesMes,
+      c: "var(--success)",
+    },
   ];
   const baMax = r.horasPerdidasMes || 1;
 
@@ -352,8 +379,8 @@ export function MementoMoriCalculator() {
               ¿Cuánto tiempo está <em>perdiendo</em> tu empresa cada semana?
             </h1>
             <p className="lede">
-              Calcula el coste invisible de buscar información, repetir procesos y
-              trabajar sin una fuente de verdad.
+              Calcula el coste invisible de buscar información, repetir procesos
+              y trabajar sin una fuente de verdad.
             </p>
             <div className="memento">
               “Recuerda que tu empresa también pierde vida. No muere de golpe:
@@ -381,8 +408,8 @@ export function MementoMoriCalculator() {
               </svg>
             </a>
             <div className="microcopy">
-              En menos de 2 minutos estimas cuánto tiempo operativo estás dejando
-              escapar.
+              En menos de 2 minutos estimas cuánto tiempo operativo estás
+              dejando escapar.
             </div>
           </div>
         </header>
@@ -405,7 +432,11 @@ export function MementoMoriCalculator() {
                   className={"mode" + (activeMode === m ? " on" : "")}
                   onClick={() => applyMode(m)}
                 >
-                  {m === "conservador" ? "Conservador" : m === "realista" ? "Realista" : "Crítico"}
+                  {m === "conservador"
+                    ? "Conservador"
+                    : m === "realista"
+                      ? "Realista"
+                      : "Crítico"}
                 </button>
               ))}
             </div>
@@ -425,7 +456,9 @@ export function MementoMoriCalculator() {
               </div>
               <div className="fld">
                 <div className="fld-top">
-                  <span className="fld-label">Coste medio por hora / persona</span>
+                  <span className="fld-label">
+                    Coste medio por hora / persona
+                  </span>
                 </div>
                 <input
                   type="number"
@@ -440,7 +473,9 @@ export function MementoMoriCalculator() {
               </div>
               <div className="fld">
                 <div className="fld-top">
-                  <span className="fld-label">Horas/día buscando información</span>
+                  <span className="fld-label">
+                    Horas/día buscando información
+                  </span>
                   <span className="fld-val">{num(busqueda, 2)} h</span>
                 </div>
                 <input
@@ -452,12 +487,15 @@ export function MementoMoriCalculator() {
                   onChange={(e) => setBusqueda(Number(e.target.value))}
                 />
                 <div className="fld-note">
-                  McKinsey estima que puede acercarse al 20% de la semana laboral.
+                  McKinsey estima que puede acercarse al 20% de la semana
+                  laboral.
                 </div>
               </div>
               <div className="fld">
                 <div className="fld-top">
-                  <span className="fld-label">Horas/día en tareas manuales</span>
+                  <span className="fld-label">
+                    Horas/día en tareas manuales
+                  </span>
                   <span className="fld-val">{num(manual, 2)} h</span>
                 </div>
                 <input
@@ -489,7 +527,14 @@ export function MementoMoriCalculator() {
                   Asana: el 60% del tiempo se va en “trabajo sobre el trabajo”.
                 </div>
               </div>
-              <div className="fld" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <div
+                className="fld"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
                 <div className="fld-note" style={{ margin: "0 0 8px" }}>
                   Coste de UNA hora perdida por todo tu equipo
                 </div>
@@ -508,25 +553,38 @@ export function MementoMoriCalculator() {
             <h2 className="sec">Tu empresa pierde aproximadamente…</h2>
             <p className="sec-sub">
               Este coste no aparece como una factura. Aparece como retrasos,
-              saturación, errores, reuniones innecesarias y decisiones más lentas.
+              saturación, errores, reuniones innecesarias y decisiones más
+              lentas.
             </p>
             <div className="kpis">
-              <div className="kpi" style={{ ["--accent" as string]: "var(--danger)" }}>
+              <div
+                className="kpi"
+                style={{ ["--accent" as string]: "var(--danger)" }}
+              >
                 <div className="kpi-cap">Horas perdidas al mes</div>
                 <div className="kpi-num">{num(r.horasPerdidasMes)}</div>
                 <div className="kpi-sub">de todo el equipo</div>
               </div>
-              <div className="kpi" style={{ ["--accent" as string]: "var(--amber)" }}>
+              <div
+                className="kpi"
+                style={{ ["--accent" as string]: "var(--amber)" }}
+              >
                 <div className="kpi-cap">Coste invisible mensual</div>
                 <div className="kpi-num">{eur(r.costeMensual)}</div>
                 <div className="kpi-sub">tiempo ya pagado</div>
               </div>
-              <div className="kpi" style={{ ["--accent" as string]: "var(--orange)" }}>
+              <div
+                className="kpi"
+                style={{ ["--accent" as string]: "var(--orange)" }}
+              >
                 <div className="kpi-cap">Coste invisible anual</div>
                 <div className="kpi-num">{eur(r.costeAnual)}</div>
                 <div className="kpi-sub">× 12 meses</div>
               </div>
-              <div className="kpi" style={{ ["--accent" as string]: "var(--info)" }}>
+              <div
+                className="kpi"
+                style={{ ["--accent" as string]: "var(--info)" }}
+              >
                 <div className="kpi-cap">Días-equipo perdidos/año</div>
                 <div className="kpi-num">{num(r.diasPerdidosAnio)}</div>
                 <div className="kpi-sub">jornadas completas</div>
@@ -555,7 +613,10 @@ export function MementoMoriCalculator() {
                   <div
                     key={s.k}
                     className="week-seg"
-                    style={{ width: `${(s.h / visTotal) * 100}%`, background: s.c }}
+                    style={{
+                      width: `${(s.h / visTotal) * 100}%`,
+                      background: s.c,
+                    }}
                   />
                 ))}
               </div>
@@ -651,7 +712,13 @@ export function MementoMoriCalculator() {
               <p className="chart-quote">
                 “La pérdida diaria parece pequeña. La pérdida anual cambia la
                 empresa.” —{" "}
-                <span style={{ color: "var(--danger)", fontStyle: "normal", fontWeight: 700 }}>
+                <span
+                  style={{
+                    color: "var(--danger)",
+                    fontStyle: "normal",
+                    fontWeight: 700,
+                  }}
+                >
                   {eur(r.costeAnual)}
                 </span>{" "}
                 al año.
@@ -659,7 +726,9 @@ export function MementoMoriCalculator() {
             </div>
 
             <div className="chart-card">
-              <div className="chart-title">Antes y después de ordenar el sistema</div>
+              <div className="chart-title">
+                Antes y después de ordenar el sistema
+              </div>
               <div className="chart-note">
                 Horas perdidas al mes que quedarían en cada escenario.
               </div>
@@ -668,7 +737,10 @@ export function MementoMoriCalculator() {
                   <div key={i} className="vcol">
                     <div
                       className="vbar"
-                      style={{ height: `${Math.max(3, (c.h / baMax) * 100)}%`, background: c.c }}
+                      style={{
+                        height: `${Math.max(3, (c.h / baMax) * 100)}%`,
+                        background: c.c,
+                      }}
                     >
                       <span className="cap">{num(c.h)} h</span>
                     </div>
@@ -702,10 +774,12 @@ export function MementoMoriCalculator() {
               <div dangerouslySetInnerHTML={{ __html: diagHtml }} />
               <div className="emo">
                 <div className="emo-card">
-                  <div className="emo-num">{num(r.personasEquivalentes, 1)}</div>
+                  <div className="emo-num">
+                    {num(r.personasEquivalentes, 1)}
+                  </div>
                   <div className="emo-lab">
-                    personas a jornada completa dedicadas solo a buscar, repetir y
-                    coordinar.
+                    personas a jornada completa dedicadas solo a buscar, repetir
+                    y coordinar.
                   </div>
                 </div>
                 <div className="emo-card">
@@ -734,8 +808,8 @@ export function MementoMoriCalculator() {
               <em>morir</em> en el caos operativo.
             </h2>
             <p>
-              La productividad no empieza trabajando más. Empieza diseñando dónde
-              vive la información y cómo se mueve el trabajo.
+              La productividad no empieza trabajando más. Empieza diseñando
+              dónde vive la información y cómo se mueve el trabajo.
             </p>
           </div>
         </section>

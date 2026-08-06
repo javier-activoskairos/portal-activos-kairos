@@ -118,9 +118,7 @@ export function MeetingModal({
   );
   const elegibles = custodios.length > 0 ? custodios : CONSULTANTS;
 
-  const consultores = tipo
-    ? elegibles.filter((c) => c.meetings[tipo.key])
-    : [];
+  const consultores = tipo ? elegibles.filter((c) => c.meetings[tipo.key]) : [];
 
   return (
     <div

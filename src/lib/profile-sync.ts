@@ -88,7 +88,9 @@ export async function hydrateProfileFromNotion(opts: {
             .from(AVATARS)
             .upload(path, buf, { contentType: ct, upsert: true });
           if (!up.error) {
-            const { data: pub } = admin.storage.from(AVATARS).getPublicUrl(path);
+            const { data: pub } = admin.storage
+              .from(AVATARS)
+              .getPublicUrl(path);
             const stable = `${pub.publicUrl}?v=${page.last_edited_time ? Date.parse(page.last_edited_time) : 0}`;
             merged.avatarUrl = stable;
             // Fija la URL estable también en el CRM (evita caducidad).
@@ -106,10 +108,12 @@ export async function hydrateProfileFromNotion(opts: {
 
     // Persiste en el Portal solo lo que cambió (rellenar vacíos).
     const patch: Record<string, string | null> = {};
-    if (!current.firstName && merged.firstName) patch.first_name = merged.firstName;
+    if (!current.firstName && merged.firstName)
+      patch.first_name = merged.firstName;
     if (!current.lastName && merged.lastName) patch.last_name = merged.lastName;
     if (!current.phone && merged.phone) patch.phone = merged.phone;
-    if (!current.roleTitle && merged.roleTitle) patch.role_title = merged.roleTitle;
+    if (!current.roleTitle && merged.roleTitle)
+      patch.role_title = merged.roleTitle;
     if (!current.personalEmail && merged.personalEmail)
       patch.personal_email = merged.personalEmail;
     if (!current.birthday && merged.birthday) patch.birthday = merged.birthday;
@@ -149,7 +153,9 @@ export async function hydrateCompanyFromNotion(opts: {
 }): Promise<CompanyFiscal> {
   const { companyId, notionId, current, persist = true } = opts;
   try {
-    const page: any = await notionClient().pages.retrieve({ page_id: notionId });
+    const page: any = await notionClient().pages.retrieve({
+      page_id: notionId,
+    });
     const p = page.properties ?? {};
     const crm = {
       fiscalName: plainText(p["Nombre Empresa Facturación"]) ?? "",
@@ -168,11 +174,13 @@ export async function hydrateCompanyFromNotion(opts: {
     };
 
     const patch: Record<string, string | null> = {};
-    if (!current.fiscalName && merged.fiscalName) patch.fiscal_name = merged.fiscalName;
+    if (!current.fiscalName && merged.fiscalName)
+      patch.fiscal_name = merged.fiscalName;
     if (!current.taxId && merged.taxId) patch.tax_id = merged.taxId;
     if (!current.address && merged.address) patch.address = merged.address;
     if (!current.city && merged.city) patch.city = merged.city;
-    if (!current.postalCode && merged.postalCode) patch.postal_code = merged.postalCode;
+    if (!current.postalCode && merged.postalCode)
+      patch.postal_code = merged.postalCode;
 
     if (persist && Object.keys(patch).length > 0) {
       const admin = createAdminClient();

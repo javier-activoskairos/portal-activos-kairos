@@ -26,7 +26,10 @@ interface Invoice {
   pdf_url: string | null;
 }
 
-const INVOICE_STATUS: Record<string, { label: string; cls: string; dot: string }> = {
+const INVOICE_STATUS: Record<
+  string,
+  { label: string; cls: string; dot: string }
+> = {
   pagada: {
     label: "Pagada",
     cls: "bg-success text-success-foreground",
@@ -82,7 +85,9 @@ export default async function FacturacionPage() {
       .maybeSingle(),
     db
       .from("invoices")
-      .select("id, number, concept, amount, currency, status, issued_at, pdf_url")
+      .select(
+        "id, number, concept, amount, currency, status, issued_at, pdf_url",
+      )
       .eq("company_id", companyId)
       .order("issued_at", { ascending: false }),
   ]);
@@ -211,7 +216,9 @@ export default async function FacturacionPage() {
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-medium ${s.cls}`}
                         >
-                          <span className={`size-[7px] rounded-full ${s.dot}`} />
+                          <span
+                            className={`size-[7px] rounded-full ${s.dot}`}
+                          />
                           {s.label}
                         </span>
                       );

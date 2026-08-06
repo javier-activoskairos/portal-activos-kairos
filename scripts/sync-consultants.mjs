@@ -88,9 +88,13 @@ for (const p of data.results) {
 }
 
 // Javier (admin) primero.
-out.sort((a, b) => (a.slug === "javier" ? -1 : 0) - (b.slug === "javier" ? -1 : 0));
+out.sort(
+  (a, b) => (a.slug === "javier" ? -1 : 0) - (b.slug === "javier" ? -1 : 0),
+);
 fs.writeFileSync(
   "src/data/consultants.json",
   JSON.stringify(out, null, 2) + "\n",
 );
-console.log(`Sincronizados ${out.length} consultores: ${out.map((c) => c.slug).join(", ")}`);
+console.log(
+  `Sincronizados ${out.length} consultores: ${out.map((c) => c.slug).join(", ")}`,
+);

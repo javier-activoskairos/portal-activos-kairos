@@ -119,8 +119,7 @@ export async function runAllSync() {
   revalidatePath("/admin");
   return {
     ok: incidents.status !== "error" && assets.status !== "error",
-    rowsUpserted:
-      (incidents.rowsUpserted ?? 0) + (assets.rowsUpserted ?? 0),
+    rowsUpserted: (incidents.rowsUpserted ?? 0) + (assets.rowsUpserted ?? 0),
     rowsRead: (incidents.rowsRead ?? 0) + (assets.rowsRead ?? 0),
     error: incidents.error || assets.error || null,
   };

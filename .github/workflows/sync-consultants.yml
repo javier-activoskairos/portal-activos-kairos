@@ -43,10 +43,5 @@ jobs:
           else
             echo "Sin cambios en consultores."
           fi
-      - name: Desplegar en Render si hubo cambios
-        if: steps.commit.outputs.changed == '1'
-        run: |
-          curl -sS -o /dev/null -w "deploy HTTP %{http_code}\n" -X POST \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            "https://api.render.com/v1/services/srv-d98i8s3eo5us73dikcn0/deploys" -d '{}'
+      # El despliegue no se lanza aquí: el push a main de arriba dispara el
+      # webhook del repo hacia EasyPanel (VPS), que reconstruye el portal.

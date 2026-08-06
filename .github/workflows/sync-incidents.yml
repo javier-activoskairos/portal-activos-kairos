@@ -4,6 +4,8 @@ name: Sync Incidencias (Notion → Supabase)
 # Supabase cada 10 minutos. Notion sigue siendo la fuente de verdad.
 # Reloj: n8n (workflow "Portal - Reloj de Sincronizaciones") lo lanza vía
 # workflow_dispatch. Aquí ya no hay cron propio.
+# ⚠️ Reemplazado por sync.yml (2026-08-07): el reloj de n8n manda un solo
+# dispatch por tick. Este workflow se mantiene para poder lanzarlo a mano.
 on:
   workflow_dispatch: {}
 

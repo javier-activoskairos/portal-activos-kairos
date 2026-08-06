@@ -1,0 +1,112 @@
+name: Sync (Notion → Supabase)
+
+# Sync único del portal. Sustituye a los 6 workflows sueltos (sync-incidents,
+# sync-members, sync-assets, sync-company-logos, sync-invoices), que se quedan
+# en el repo solo para lanzarlos a mano si hace falta.
+#
+# Por qué uno solo:
+#   - Un `npm ci` por tick en lugar de uno por sync (~3 veces menos minutos).
+#   - Un único grupo de concurrencia: los syncs ya no se ponen en cola unos
+#     detrás de otros ni se cancelan entre sí cuando los runners de GitHub van
+#     lentos (un run pendiente muere en cuanto llega el siguiente del mismo grupo).
+#
+# Reloj: n8n, workflow "Portal - Reloj de Sincronizaciones (GitHub Actions)"
+# (`JhG6Bqo6rWn0Ftdk`). Cada 10 min manda UN dispatch con la lista de syncs que
+# tocan en ese tick. Aquí no hay cron propio.
+on:
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: "Syncs a ejecutar, separados por comas: incidents, members, assets, logos, invoices"
+        required: true
+        default: "incidents,members,assets"
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      NOTION_ASSETS_DB: ${{ secrets.NOTION_ASSETS_DB }}
+      NOTION_INCIDENTS_DB: ${{ secrets.NOTION_INCIDENTS_DB }}
+      AK_COMPANY_NOTION_ID: ${{ secrets.AK_COMPANY_NOTION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      # `cache: npm` de setup-node solo guarda la descarga; la instalación se
+      # repite entera cada run. Cacheando node_modules el run baja de ~70s a ~15s.
+      - name: Cache node_modules
+        id: modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
+      - name: Instalar dependencias
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # Cada sync es independiente: si uno falla, los demás siguen y el veredicto
+      # se emite al final (igual que cuando eran workflows separados).
+      - name: Incidencias
+        id: incidents
+        if: contains(inputs.jobs, 'incidents')
+        continue-on-error: true
+        run: npm run sync:incidents
+
+      - name: Miembros
+        id: members
+        if: contains(inputs.jobs, 'members')
+        continue-on-error: true
+        run: npm run sync:members -- --apply
+
+      - name: Activos
+        id: assets
+        if: contains(inputs.jobs, 'assets')
+        continue-on-error: true
+        run: npm run sync:assets
+
+      - name: Logos de empresa
+        id: logos
+        if: contains(inputs.jobs, 'logos')
+        continue-on-error: true
+        run: npm run sync:logos
+
+      - name: Facturas
+        id: invoices
+        if: contains(inputs.jobs, 'invoices')
+        continue-on-error: true
+        run: npm run sync:invoices
+
+      - name: Resultado
+        run: |
+          set -euo pipefail
+          fallos=0
+          revisar() {
+            case "$2" in
+              failure) echo "::error::Sync $1 falló"; fallos=$((fallos + 1));;
+              success) echo "✅ $1";;
+              *)       echo "· $1 no tocaba en este tick";;
+            esac
+          }
+          revisar incidents "${{ steps.incidents.outcome }}"
+          revisar members   "${{ steps.members.outcome }}"
+          revisar assets    "${{ steps.assets.outcome }}"
+          revisar logos     "${{ steps.logos.outcome }}"
+          revisar invoices  "${{ steps.invoices.outcome }}"
+          if [ "$fallos" -gt 0 ]; then
+            echo "$fallos sync(s) con error."
+            exit 1
+          fi

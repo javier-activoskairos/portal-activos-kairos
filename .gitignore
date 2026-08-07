@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env.backfill
+
+# bot del puente Discord (servicio aparte, se instala en su propio contenedor)
+/bot-discord/node_modules

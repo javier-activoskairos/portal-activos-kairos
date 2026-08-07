@@ -37,7 +37,10 @@ export default async function proxy(request: NextRequest) {
   const isPublic =
     path === "/login" ||
     path.startsWith("/auth") ||
-    path === "/acceso-denegado";
+    path === "/acceso-denegado" ||
+    // Entrada del bot de Discord: no hay sesión de navegador, se autentica con
+    // el secreto compartido dentro del propio route handler.
+    path === "/api/chat/discord";
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

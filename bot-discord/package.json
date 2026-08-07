@@ -1,0 +1,17 @@
+{
+  "name": "kairos-chat-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Puente Discord → Portal Activos Kairos (bot Asynk)",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

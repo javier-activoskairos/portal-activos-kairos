@@ -41,7 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/activos", label: "Activos", icon: IconAssets },
   { href: "/incidencias", label: "Incidencias", icon: IconAlert },
   { href: "/facturacion", label: "Facturación", icon: IconBilling },
-  { href: "/chat", label: "Chat", icon: IconChat, soon: true },
+  { href: "/chat", label: "Chat", icon: IconChat },
 ];
 
 /** Sección "Recursos": páginas transversales, iguales para todos los clientes. */

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Servicio aparte (bot de Discord): su propio runtime, no es parte del app.
+    "bot-discord/**",
   ]),
 ]);
 

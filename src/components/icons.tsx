@@ -48,6 +48,15 @@ export function IconChat({ width = 19, height = 19, ...p }: IconProps) {
   );
 }
 
+export function IconSend({ width = 17, height = 17, ...p }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>
+      <path d="M21.5 12 3 4l3 8-3 8 18.5-8Z" />
+      <path d="M6 12h15.5" />
+    </svg>
+  );
+}
+
 export function IconLock({ width = 17, height = 17, ...p }: IconProps) {
   return (
     <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>

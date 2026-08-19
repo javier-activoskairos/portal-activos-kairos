@@ -155,7 +155,9 @@ export default async function PrimerosPasosPage() {
         <h1 className="text-foreground mt-2.5 text-[28px] leading-tight font-extrabold tracking-tight">
           Empecemos por lo básico.
         </h1>
-        <p className="text-muted-foreground mt-1.5 max-w-[62ch] text-[15px] leading-relaxed">
+        {/* Sin max-w: los párrafos ocupan lo mismo que el grid de tarjetas y los
+            bloques, para que todo quede alineado al mismo ancho. */}
+        <p className="text-muted-foreground mt-1.5 text-[15px] leading-relaxed">
           Antes de construir nada necesitamos las cuentas listas. Solo tienes
           que crear las de{" "}
           <span className="text-foreground font-semibold">
@@ -173,7 +175,7 @@ export default async function PrimerosPasosPage() {
           <h2 className="text-foreground text-[19px] font-bold tracking-tight">
             1 · Crea las cuentas que te falten
           </h2>
-          <p className="text-muted-foreground mt-1 max-w-[62ch] text-[13.5px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 text-[13.5px] leading-relaxed">
             Cada tarjeta tiene el enlace de alta y un vídeo corto con el paso a
             paso. Date de alta desde estos enlaces: son de partner y algunos te
             dan ventajas que no consigues entrando por tu cuenta.
@@ -234,7 +236,7 @@ export default async function PrimerosPasosPage() {
             2 · Si ya las tienes, dános acceso
           </h2>
         </div>
-        <p className="text-muted-foreground max-w-[70ch] text-[13.5px] leading-relaxed">
+        <p className="text-muted-foreground text-[13.5px] leading-relaxed">
           No hace falta crear cuentas nuevas ni migrar nada. Según lo que
           hayamos acordado para cada herramienta, con una de estas dos cosas es
           suficiente:{" "}
@@ -245,18 +247,18 @@ export default async function PrimerosPasosPage() {
           </span>{" "}
           por el canal que te indiquemos.
         </p>
-        <p className="text-muted-foreground border-border flex max-w-[70ch] items-start gap-2 rounded-[14px] border border-dashed p-3.5 text-[13.5px] leading-relaxed">
+        <p className="text-muted-foreground border-border flex items-start gap-2 rounded-[14px] border border-dashed p-3.5 text-[13.5px] leading-relaxed">
           <IconMail
             width={16}
             height={16}
             className="text-brand-accent mt-0.5 shrink-0"
           />
           <span>
-            En cualquier caso necesitamos{" "}
+            Cuando tengas las cuentas creadas y nos hayas invitado,{" "}
             <span className="text-foreground font-semibold">
-              el correo de tu cuenta de Notion
-            </span>
-            : sin él no podemos darte acceso al espacio de trabajo.
+              avísanos por correo
+            </span>{" "}
+            y seguimos desde ahí.
           </span>
         </p>
       </section>
@@ -267,7 +269,7 @@ export default async function PrimerosPasosPage() {
           <h2 className="text-foreground text-[19px] font-bold tracking-tight">
             3 · Conecta las herramientas entre sí
           </h2>
-          <p className="text-muted-foreground mt-1 max-w-[62ch] text-[13.5px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 text-[13.5px] leading-relaxed">
             Con las cuentas creadas, queda autorizar a Make para que hable con
             el resto. Un vídeo por conexión.
           </p>

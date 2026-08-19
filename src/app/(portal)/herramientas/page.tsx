@@ -107,7 +107,7 @@ export default async function HerramientasPage() {
     <div className="portal-reveal space-y-5">
       <div>
         <p className="text-brand-accent text-[12.5px] font-semibold tracking-[0.14em] uppercase">
-          Recursos
+          Herramientas
         </p>
         <h1 className="text-foreground mt-2.5 text-[28px] leading-tight font-extrabold tracking-tight">
           Las herramientas con las que trabajamos.

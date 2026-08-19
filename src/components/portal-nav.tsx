@@ -13,6 +13,7 @@ import {
   IconChat,
   IconChevronLeft,
   IconExternal,
+  IconFlag,
   IconHome,
   IconHourglass,
   IconLock,
@@ -44,8 +45,13 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/chat", label: "Chat", icon: IconChat, soon: true },
 ];
 
-/** Sección "Recursos": páginas transversales, iguales para todos los clientes. */
-const RESOURCE_ITEMS: (NavItem & { external?: boolean })[] = [
+/**
+ * Sección "Primeros Pasos": páginas transversales, iguales para todos los
+ * clientes. Encabeza la puesta en marcha porque es lo primero que necesita
+ * hacer un cliente recién incorporado.
+ */
+const ONBOARDING_ITEMS: (NavItem & { external?: boolean })[] = [
+  { href: "/primeros-pasos", label: "Primeros Pasos", icon: IconFlag },
   { href: "/herramientas", label: "Herramientas", icon: IconToolbox },
   {
     href: "/memento-mori",
@@ -149,7 +155,7 @@ export function PortalNav({
           : "text-muted-foreground hover:text-foreground font-medium",
     );
 
-  // Rótulo de sección ("Recursos", "Acciones"): mismo tratamiento que "Bitácora de Rumbo".
+  // Rótulo de sección ("Primeros Pasos", "Acciones"): mismo tratamiento que "Bitácora de Rumbo".
   const sectionCls =
     "text-brand-accent px-2 pt-1 pb-1 font-mono text-[10px] font-bold tracking-[0.18em] uppercase";
 
@@ -242,10 +248,10 @@ export function PortalNav({
             );
           })}
 
-          {/* ---- Sección Recursos ---- */}
+          {/* ---- Sección Primeros Pasos ---- */}
           <span className="bg-border my-2 h-px w-full" />
-          {!collapsed && <span className={sectionCls}>Recursos</span>}
-          {RESOURCE_ITEMS.map((item) => {
+          {!collapsed && <span className={sectionCls}>Primeros Pasos</span>}
+          {ONBOARDING_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <Link
@@ -488,8 +494,8 @@ export function PortalNav({
               </Link>
             );
           })}
-          {/* Recursos — mismas entradas que la sidebar */}
-          {RESOURCE_ITEMS.map((item) => {
+          {/* Primeros Pasos — mismas entradas que la sidebar */}
+          {ONBOARDING_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <Link

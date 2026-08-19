@@ -314,6 +314,26 @@ export function IconClock({ width = 19, height = 19, ...p }: IconProps) {
   );
 }
 
+// Bandera de salida: identifica la sección "Primeros Pasos" (el punto de partida).
+export function IconFlag({ width = 16, height = 16, ...p }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>
+      <path d="M5 22V3" />
+      <path d="M5 4h12l-2.5 4L17 12H5" />
+    </svg>
+  );
+}
+
+// Play: marca los enlaces que abren un vídeo, para distinguirlos de los de alta.
+export function IconPlay({ width = 14, height = 14, ...p }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M10 8.5v7l5.5-3.5-5.5-3.5Z" />
+    </svg>
+  );
+}
+
 export function IconSettings({ width = 19, height = 19, ...p }: IconProps) {
   return (
     <svg width={width} height={height} viewBox="0 0 24 24" {...base} {...p}>

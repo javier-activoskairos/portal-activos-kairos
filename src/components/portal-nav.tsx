@@ -21,7 +21,6 @@ import {
   IconPlus,
   IconSettings,
   IconTemple,
-  IconToolbox,
 } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MeetingModal } from "@/components/meeting-modal";
@@ -51,8 +50,9 @@ const NAV_ITEMS: NavItem[] = [
  * hacer un cliente recién incorporado.
  */
 const ONBOARDING_ITEMS: (NavItem & { external?: boolean })[] = [
+  // El catálogo de herramientas vive dentro de /primeros-pasos: la antigua
+  // entrada "Herramientas" desaparece y su ruta redirige (ver next.config.ts).
   { href: "/primeros-pasos", label: "Primeros Pasos", icon: IconFlag },
-  { href: "/herramientas", label: "Herramientas", icon: IconToolbox },
   {
     href: "/memento-mori",
     label: "Memento Mori",

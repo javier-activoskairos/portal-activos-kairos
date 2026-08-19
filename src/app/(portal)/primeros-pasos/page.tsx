@@ -12,13 +12,23 @@ import {
 export const metadata = { title: "Primeros Pasos · Portal Activos Kairos" };
 export const dynamic = "force-dynamic";
 
+interface EnlaceAlta {
+  label: string;
+  href: string;
+}
+
 interface Herramienta {
   name: string;
   desc: string;
-  /** Enlace de alta (o de descarga, cuando la herramienta es una app). */
-  signup: { label: string; href: string };
+  /**
+   * Enlaces de alta (o de descarga, cuando la herramienta es una app). Varios
+   * cuando la ventaja de partner viene en distintas modalidades (Manychat).
+   */
+  links: EnlaceAlta[];
   /** Ventaja de partner, si la hay. */
   perk?: string;
+  /** Aviso adicional bajo los enlaces. */
+  note?: string;
   /** Vídeo de alta y configuración. `null` mientras no esté grabado. */
   video: string | null;
 }
@@ -33,61 +43,109 @@ interface Conexion {
 
 /**
  * Contenido de la puesta en marcha. Hardcodeado a propósito: es el mismo para
- * todos los clientes (igual que el catálogo de /herramientas), así que no
- * merece base de datos ni sincronización con Notion. Qué herramientas aplican
- * a cada proyecto se acuerda en el descubrimiento, no se decide aquí.
+ * todos los clientes, así que no merece base de datos ni sincronización con
+ * Notion. Qué herramientas aplican a cada proyecto se acuerda en el
+ * descubrimiento, no se decide aquí.
+ *
+ * Esta lista es el catálogo único de altas: absorbe el que vivía en la página
+ * /herramientas (eliminada; ahora redirige aquí) para que el cliente no tenga
+ * que mirar en dos sitios qué cuenta le toca crear.
  */
 const HERRAMIENTAS: Herramienta[] = [
   {
     name: "Notion",
-    desc: "El espacio de trabajo donde vive tu sistema: documentación, bases de datos y paneles.",
-    signup: {
-      label: "Darse de alta",
-      href: "https://affiliate.notion.so/kairos",
-    },
+    desc: "Espacio de trabajo todo en uno: documentación, bases de datos y paneles. Es donde vive tu sistema Kairos.",
+    links: [
+      { label: "Darse de alta", href: "https://affiliate.notion.so/kairos" },
+    ],
     perk: "3 meses de plan Business gratis.",
     video: "https://www.loom.com/share/4d1a94ec725e4bb39c53ff71da74ab3e",
   },
   {
     name: "Make",
     desc: "El motor de las automatizaciones: conecta tus aplicaciones entre sí.",
-    signup: {
-      label: "Darse de alta",
-      href: "https://www.make.com/en/register?pc=kairos",
-    },
+    links: [
+      {
+        label: "Darse de alta",
+        href: "https://www.make.com/en/register?pc=kairos",
+      },
+    ],
     video: "https://www.loom.com/share/b44ac600394445a2bc146cc57581db3d",
   },
   {
     name: "Tally",
     desc: "Formularios que entran directamente en tus bases de datos.",
-    signup: {
-      label: "Darse de alta",
-      href: "https://tally.cello.so/QBDMK3TYicO",
-    },
+    links: [
+      { label: "Darse de alta", href: "https://tally.cello.so/QBDMK3TYicO" },
+    ],
     video: "https://www.loom.com/share/12e3048662924427890e395c6df15680",
   },
   {
     name: "Loom",
     desc: "Grabación de pantalla para explicar procesos sin necesidad de reunirse.",
-    signup: { label: "Descargar Loom", href: "https://www.loom.com/download" },
+    links: [{ label: "Descargar Loom", href: "https://www.loom.com/download" }],
     video: "https://www.loom.com/share/91d10ef9a12941d7822f3541fae19305",
+  },
+  {
+    name: "Tella",
+    desc: "Grabación de vídeo y pantalla para explicar procesos sin reuniones.",
+    links: [
+      {
+        label: "Darse de alta",
+        href: "https://refer.tella.com/activos-kairos",
+      },
+    ],
+    perk: "20 % de descuento durante 3 meses.",
+    video: null,
   },
   {
     name: "Google Workspace",
     desc: "Correo profesional, Drive, Calendar y Meet con tu propio dominio.",
-    signup: {
-      label: "Darse de alta",
-      href: "https://c.gle/ANiao5qvW-wlMKjb5uG8T636fl5upAcgnJu5vFHhiMy7mBTL31rVn2sA04_cYoOiR5yWAB03tEXhhreOrpPM9_Y6gU_Xe4EYUlzwyjXd-gvvD5FNIv_ql2hjIWtJ-emhLcjGiX76fSZN1iEZmhKewG61",
-    },
+    links: [
+      {
+        label: "Darse de alta",
+        href: "https://c.gle/ANiao5qvW-wlMKjb5uG8T636fl5upAcgnJu5vFHhiMy7mBTL31rVn2sA04_cYoOiR5yWAB03tEXhhreOrpPM9_Y6gU_Xe4EYUlzwyjXd-gvvD5FNIv_ql2hjIWtJ-emhLcjGiX76fSZN1iEZmhKewG61",
+      },
+    ],
+    perk: "14 días de prueba gratuita + códigos de descuento para los planes Starter y Standard.",
+    note: "Los códigos de descuento son de un solo uso: pídenoslos antes de contratar y te asignamos uno.",
     video: "https://www.loom.com/share/ad5e5788031a4c009530382408951b1f",
+  },
+  {
+    name: "Softr",
+    desc: "Portales y aplicaciones web sobre tus propias bases de datos, sin programar.",
+    links: [{ label: "Darse de alta", href: "https://get.softr.io/kairos" }],
+    video: null,
+  },
+  {
+    name: "Manychat",
+    desc: "Automatización de conversaciones en WhatsApp, Instagram y Messenger.",
+    links: [
+      {
+        label: "1er mes gratis en PRO",
+        href: "https://manychat.partnerlinks.io/kairos-mes-pro",
+      },
+      {
+        label: "30 % dto. · 3 meses",
+        href: "https://manychat.partnerlinks.io/10wid2zjztmc",
+      },
+      {
+        label: "50 % dto. · 2 meses",
+        href: "https://manychat.partnerlinks.io/klmcfdhqq66i-wki14",
+      },
+    ],
+    perk: "Tres ventajas disponibles: elige la que mejor te encaje.",
+    video: null,
   },
   {
     name: "VPS (Hostinger)",
     desc: "Servidor propio para alojar las automatizaciones que no deben depender de terceros.",
-    signup: {
-      label: "Darse de alta",
-      href: "https://www.hostinger.com/es?REFERRALCODE=FQMJAVIERSMP",
-    },
+    links: [
+      {
+        label: "Darse de alta",
+        href: "https://www.hostinger.com/es?REFERRALCODE=FQMJAVIERSMP",
+      },
+    ],
     // Pendiente: Javier grabará el vídeo del alta del VPS. Hasta entonces se
     // muestra "Vídeo en camino" en vez de un enlace que no lleva a ningún sitio.
     video: null,
@@ -176,10 +234,19 @@ export default async function PrimerosPasosPage() {
             1 · Crea las cuentas que te falten
           </h2>
           <p className="text-muted-foreground mt-1 text-[13.5px] leading-relaxed">
-            Cada tarjeta tiene el enlace de alta y un vídeo corto con el paso a
-            paso. Date de alta desde estos enlaces: son de partner y algunos te
-            dan ventajas que no consigues entrando por tu cuenta.
+            Cada tarjeta tiene el enlace de alta y, cuando lo hay, un vídeo
+            corto con el paso a paso. Date de alta desde estos enlaces: son de
+            partner y algunos te dan ventajas que no consigues entrando por tu
+            cuenta.
           </p>
+        </div>
+
+        <div className="border-border bg-card text-muted-foreground rounded-[18px] border border-dashed p-4 text-[13.5px] leading-relaxed">
+          ¿Dudas sobre cuál te conviene o sobre qué plan contratar? Escríbenos{" "}
+          <span className="text-foreground font-semibold">
+            antes de contratar
+          </span>{" "}
+          y lo vemos contigo.
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -205,10 +272,12 @@ export default async function PrimerosPasosPage() {
                 </p>
               )}
               <div className="mt-3.5 flex flex-wrap items-center gap-2">
-                <EnlaceExterno href={tool.signup.href} primary>
-                  {tool.signup.label}
-                  <IconExternal className="text-muted-foreground" />
-                </EnlaceExterno>
+                {tool.links.map((link) => (
+                  <EnlaceExterno key={link.href} href={link.href} primary>
+                    {link.label}
+                    <IconExternal className="text-muted-foreground" />
+                  </EnlaceExterno>
+                ))}
                 {tool.video ? (
                   <EnlaceExterno href={tool.video}>
                     <IconPlay />
@@ -221,6 +290,11 @@ export default async function PrimerosPasosPage() {
                   </span>
                 )}
               </div>
+              {tool.note && (
+                <p className="text-muted-foreground mt-2.5 text-[12px] leading-snug">
+                  {tool.note}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -305,8 +379,9 @@ export default async function PrimerosPasosPage() {
       </section>
 
       <p className="text-muted-foreground text-[13.5px] leading-relaxed">
-        ¿Te has atascado en algún paso? Abre una incidencia o agenda una reunión
-        desde el menú y lo resolvemos contigo.
+        ¿Te has atascado en algún paso o echas en falta alguna herramienta? Abre
+        una incidencia o agenda una reunión desde el menú y lo resolvemos
+        contigo.
       </p>
     </div>
   );

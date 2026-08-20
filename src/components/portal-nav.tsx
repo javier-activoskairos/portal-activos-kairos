@@ -45,11 +45,11 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * Sección "Primeros Pasos": páginas transversales, iguales para todos los
- * clientes. Encabeza la puesta en marcha porque es lo primero que necesita
- * hacer un cliente recién incorporado.
+ * Sección "Recursos": páginas transversales, iguales para todos los clientes.
+ * La primera es la puesta en marcha, que es lo que necesita un cliente recién
+ * incorporado; el catálogo de herramientas vive dentro de ella.
  */
-const ONBOARDING_ITEMS: (NavItem & { external?: boolean })[] = [
+const RESOURCE_ITEMS: (NavItem & { external?: boolean })[] = [
   // El catálogo de herramientas vive dentro de /primeros-pasos: la antigua
   // entrada "Herramientas" desaparece y su ruta redirige (ver next.config.ts).
   { href: "/primeros-pasos", label: "Primeros Pasos", icon: IconFlag },
@@ -155,7 +155,7 @@ export function PortalNav({
           : "text-muted-foreground hover:text-foreground font-medium",
     );
 
-  // Rótulo de sección ("Primeros Pasos", "Acciones"): mismo tratamiento que "Bitácora de Rumbo".
+  // Rótulo de sección ("Recursos", "Acciones"): mismo tratamiento que "Bitácora de Rumbo".
   const sectionCls =
     "text-brand-accent px-2 pt-1 pb-1 font-mono text-[10px] font-bold tracking-[0.18em] uppercase";
 
@@ -248,10 +248,10 @@ export function PortalNav({
             );
           })}
 
-          {/* ---- Sección Primeros Pasos ---- */}
+          {/* ---- Sección Recursos ---- */}
           <span className="bg-border my-2 h-px w-full" />
-          {!collapsed && <span className={sectionCls}>Primeros Pasos</span>}
-          {ONBOARDING_ITEMS.map((item) => {
+          {!collapsed && <span className={sectionCls}>Recursos</span>}
+          {RESOURCE_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <Link
@@ -494,8 +494,8 @@ export function PortalNav({
               </Link>
             );
           })}
-          {/* Primeros Pasos — mismas entradas que la sidebar */}
-          {ONBOARDING_ITEMS.map((item) => {
+          {/* Recursos — mismas entradas que la sidebar */}
+          {RESOURCE_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <Link

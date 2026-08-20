@@ -111,6 +111,19 @@ export async function syncInvoices() {
     .filter((id): id is string => !!id);
   const productNames = await resolveProductNames(notion, productIds);
 
+  // Claves de PDF ya conocidas: si el re-hospedaje falla ahora (URL de Notion
+  // caducada, corte de red), se conserva la anterior en vez de dejar al cliente
+  // sin botón de descarga de una factura que ayer sí bajaba.
+  const { data: knownPdfs, error: pErr } = await admin
+    .from("invoices")
+    .select("notion_id, pdf_path")
+    .not("pdf_path", "is", null);
+  if (pErr) throw pErr;
+  const priorPdf = new Map<string, string>();
+  for (const r of knownPdfs ?? []) {
+    if (r.notion_id && r.pdf_path) priorPdf.set(r.notion_id, r.pdf_path);
+  }
+
   // Agrupa por empresa (interna). Excluye AK y empresas fuera del portal.
   const byCompany = new Map<string, any[]>();
   for (const page of rows) {
@@ -127,7 +140,8 @@ export async function syncInvoices() {
     const productId = p["Producto"]?.relation?.[0]?.id as string | undefined;
     const concepto =
       (productId && productNames.get(productId)) || "Suscripción";
-    const pdfUrl = await rehostPdf(admin, page);
+    const pdfPath =
+      (await rehostPdf(admin, page)) ?? priorPdf.get(page.id) ?? null;
     const inv = {
       notion_id: page.id as string,
       company_id: companyId,
@@ -137,7 +151,7 @@ export async function syncInvoices() {
       currency: formulaValue(p["Divisa Símbolo"]) ?? "€",
       status: STATUS_MAP[statusName(p["Estado"]) ?? ""] ?? "pendiente",
       issued_at: dateStart(p["Emisión"]),
-      pdf_url: pdfUrl,
+      pdf_path: pdfPath,
     };
     const arr = byCompany.get(companyId) ?? [];
     arr.push(inv);
@@ -168,6 +182,12 @@ export async function syncInvoices() {
   return { status: "success" as const, companies: byCompany.size, upserted };
 }
 
+/**
+ * Descarga el PDF de Notion (su URL firmada caduca) y lo re-hospeda en el
+ * bucket PRIVADO invoice-pdfs. Devuelve la clave del objeto, nunca una URL:
+ * la descarga solo se sirve a través de /api/facturas/[id]/pdf, que autoriza.
+ * Ante cualquier fallo devuelve null y el llamante conserva la clave anterior.
+ */
 async function rehostPdf(admin: any, page: any): Promise<string | null> {
   const f = page.properties?.["Factura"]?.files?.[0];
   const url: string | undefined = f?.file?.url ?? f?.external?.url;
@@ -181,9 +201,7 @@ async function rehostPdf(admin: any, page: any): Promise<string | null> {
       .from("invoice-pdfs")
       .upload(path, buf, { contentType: "application/pdf", upsert: true });
     if (up.error) throw up.error;
-    const { data: pub } = admin.storage.from("invoice-pdfs").getPublicUrl(path);
-    const v = Date.parse(page.last_edited_time) || 0;
-    return `${pub.publicUrl}?v=${v}`;
+    return path;
   } catch (e) {
     console.error(`[sync:invoices] pdf ${page.id}`, e);
     return null;

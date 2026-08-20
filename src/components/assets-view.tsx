@@ -212,16 +212,28 @@ function AssetTable({
           {rows.map((a) => {
             const d = derive(a);
             return (
+              // La flecha de la última celda sugiere acción pero es decorativa:
+              // quien activa la fila es el <button> del nombre, estirado con
+              // `after:inset-0` sobre la <tr> (de ahí `relative`). Mantiene el
+              // aspecto de fila clicable y añade Tab + Enter/Espacio.
               <tr
                 key={a.id}
-                onClick={() => onOpen(a.id)}
-                className="border-border/60 hover:bg-muted/40 cursor-pointer border-t transition-colors"
+                className={cn(
+                  "border-border/60 hover:bg-muted/40 relative cursor-pointer border-t transition-colors",
+                  "has-[button:focus-visible]:outline-ring has-[button:focus-visible]:outline-2 has-[button:focus-visible]:-outline-offset-2",
+                )}
               >
                 <td className="px-[18px] py-4 align-middle">
                   <StatusBadge label={d.statusLabel} spec={d.badge} />
                 </td>
                 <td className="text-foreground px-[18px] py-4 align-middle text-sm font-semibold">
-                  {a.name}
+                  <button
+                    type="button"
+                    onClick={() => onOpen(a.id)}
+                    className="text-left after:absolute after:inset-0 focus-visible:outline-none"
+                  >
+                    {a.name}
+                  </button>
                 </td>
                 <td className="px-[18px] py-4 align-middle">
                   <StatusBadge
@@ -235,7 +247,8 @@ function AssetTable({
                   </td>
                 )}
                 <td className="text-muted-foreground px-[18px] py-4 align-middle">
-                  <IconArrow width={16} height={16} />
+                  {/* Decorativa: la acción real la aporta el botón del nombre. */}
+                  <IconArrow width={16} height={16} aria-hidden />
                 </td>
               </tr>
             );
@@ -275,7 +288,7 @@ function AssetDetail({ a, onBack }: { a: AssetRow; onBack: () => void }) {
       <button
         type="button"
         onClick={onBack}
-        className="text-muted-foreground hover:text-foreground -ml-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13.5px] font-medium transition-colors"
+        className="text-muted-foreground hover:text-foreground -ml-2 flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13.5px] font-medium transition-colors"
       >
         <IconArrowLeft width={16} height={16} />
         Volver a Activos
@@ -511,7 +524,7 @@ export function AssetsView({ assets }: { assets: AssetRow[] }) {
                   type="button"
                   onClick={() => setView(v.key)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-medium transition-all",
+                    "inline-flex min-h-10 items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-medium transition-all",
                     active
                       ? "bg-card text-foreground shadow-[var(--shadow-sm)]"
                       : "text-muted-foreground hover:text-foreground",

@@ -108,7 +108,9 @@ export function LegendBarChart({
                   "flex items-center gap-1.5 text-[12.5px] transition-opacity",
                   on
                     ? "text-muted-foreground"
-                    : "text-muted-foreground/50 line-through",
+                    : // El tachado ya señala la serie desactivada; bajar además la
+                      // opacidad dejaba la etiqueta en ~1,7:1 e ilegible.
+                      "text-muted-foreground line-through",
                 )}
               >
                 <span

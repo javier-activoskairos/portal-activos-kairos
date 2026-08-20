@@ -19,10 +19,59 @@ const INCIDENT_BADGE: Record<string, BadgeSpec> = {
   Pendiente: { tone: "danger", dot: true },
   Solucionando: { tone: "info", dot: true },
   "En Espera": { tone: "purple", dot: true },
+  Verificación: { tone: "warning", dot: true },
   Escalada: { tone: "orange", dot: true },
   Solucionada: { tone: "success", dot: false },
-  "Solucionada con Acciones Pendientes": { tone: "warning", dot: true },
 };
+
+/*
+ * Fuente única de verdad de los estados de incidencia. Se corresponden 1:1 con
+ * el status de [AKS] - Incidencias en Notion (grupos To-do / In progress /
+ * Complete). Cualquier vista que agrupe incidencias DEBE usar `incidentBucket`
+ * en vez de redefinir sus propios conjuntos.
+ */
+export const INCIDENT_OPEN = [
+  "Pendiente",
+  "Solucionando",
+  "En Espera",
+] as const;
+export const INCIDENT_VERIFY = ["Verificación"] as const;
+export const INCIDENT_RESOLVED = ["Solucionada", "Escalada"] as const;
+
+export type IncidentBucket = "open" | "verify" | "resolved";
+
+const OPEN_SET: ReadonlySet<string> = new Set(INCIDENT_OPEN);
+const VERIFY_SET: ReadonlySet<string> = new Set(INCIDENT_VERIFY);
+
+/**
+ * Clasifica una incidencia. Los estados desconocidos caen en "resolved" por
+ * descarte, de forma que un estado nuevo en Notion siga siendo visible en algún
+ * sitio en vez de desaparecer de todas las secciones.
+ */
+export function incidentBucket(
+  status: string | null | undefined,
+): IncidentBucket {
+  if (!status) return "resolved";
+  if (OPEN_SET.has(status)) return "open";
+  if (VERIFY_SET.has(status)) return "verify";
+  return "resolved";
+}
+
+// Etiqueta de cara al cliente: la página promete "sin jerga", así que no se
+// muestran los nombres internos de Notion.
+const INCIDENT_STATUS_LABEL: Record<string, string> = {
+  Pendiente: "Recibida",
+  Solucionando: "En curso",
+  "En Espera": "En espera",
+  Verificación: "Lista para que la revises",
+  Escalada: "Resuelta, con seguimiento",
+  Solucionada: "Resuelta",
+};
+
+export function incidentStatusLabel(status: string | null | undefined): string {
+  if (!status) return "—";
+  return INCIDENT_STATUS_LABEL[status] ?? status;
+}
 
 const ASSET_BADGE: Record<string, BadgeSpec> = {
   "Por Empezar": { tone: "warning", dot: true },
@@ -125,6 +174,14 @@ export function dotClass(tone: Tone): string {
   return DOT_CLASS[tone];
 }
 
+/*
+ * Las fechas de Notion sin hora ("2026-08-01") se parsean como medianoche UTC.
+ * Sin fijar zona, el navegador las formatea en la local y un cliente al oeste
+ * (Empresas contempla idioma "Argentino") veía el día anterior. El negocio se
+ * factura y se planifica en horario peninsular, así que se ancla ahí.
+ */
+export const DISPLAY_TIME_ZONE = "Europe/Madrid";
+
 export function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
@@ -133,6 +190,7 @@ export function formatDate(value: string | null | undefined): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: DISPLAY_TIME_ZONE,
   });
 }
 
@@ -140,7 +198,11 @@ export function formatDateShort(value: string | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "short",
+    timeZone: DISPLAY_TIME_ZONE,
+  });
 }
 
 export function formatProgress(value: string | null | undefined): number {

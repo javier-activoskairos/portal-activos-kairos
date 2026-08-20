@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { getPortalSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeImageExtension, IMAGE_TYPES_HELP } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,14 @@ export async function POST(request: Request) {
   const session = await getPortalSession();
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+  // El banner de "Ver como cliente" promete solo lectura: sin esto, un admin
+  // previsualizando crearía incidencias reales en el Notion del cliente.
+  if (session.viewingAs) {
+    return NextResponse.json(
+      { error: "No puedes crear incidencias en modo previsualización" },
+      { status: 403 },
+    );
   }
 
   let titulo = "";
@@ -52,10 +61,12 @@ export async function POST(request: Request) {
     );
   }
 
+  let imagenExt: string | null = null;
   if (imagen) {
-    if (!imagen.type.startsWith("image/")) {
+    imagenExt = safeImageExtension(imagen.type);
+    if (!imagenExt) {
       return NextResponse.json(
-        { error: "El adjunto debe ser una imagen" },
+        { error: `El adjunto debe ser una imagen (${IMAGE_TYPES_HELP})` },
         { status: 400 },
       );
     }
@@ -77,11 +88,27 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const { data: company } = await supabase
+  const { data: company, error: companyErr } = await supabase
     .from("companies")
     .select("notion_id")
     .eq("id", session.companyId)
     .maybeSingle();
+  // Sin notion_id la incidencia se crearía en Notion SIN relación a Empresa:
+  // invisible en el portal (todo filtra por empresa) y fuera de la asignación.
+  // Mejor fallar aquí que responder "registrada" y perderla.
+  if (companyErr || !company?.notion_id) {
+    console.error(
+      `[incidencias] empresa ${session.companyId}`,
+      companyErr?.message ?? "sin notion_id",
+    );
+    return NextResponse.json(
+      {
+        error:
+          "No hemos podido identificar tu empresa. Escríbenos y lo revisamos.",
+      },
+      { status: 500 },
+    );
+  }
 
   // Sube la imagen (si existe) y obtiene su URL pública.
   let imagenUrl: string | null = null;
@@ -89,8 +116,8 @@ export async function POST(request: Request) {
   if (imagen) {
     try {
       const admin = createAdminClient();
-      const ext = (imagen.name.split(".").pop() || "png").toLowerCase();
-      const path = `${session.companyId}/${randomUUID()}.${ext}`;
+      // La extensión sale del MIME validado, nunca del nombre del fichero.
+      const path = `${session.companyId}/${randomUUID()}.${imagenExt}`;
       const buffer = Buffer.from(await imagen.arrayBuffer());
       const up = await admin.storage
         .from("incident-uploads")
@@ -123,7 +150,7 @@ export async function POST(request: Request) {
         loom,
         correo: session.email,
         tipo: "incidencia",
-        empresaNotionId: company?.notion_id ?? null,
+        empresaNotionId: company.notion_id,
         contactoNotionId: session.contactNotionId,
         imagenUrl,
         imagenNombre,

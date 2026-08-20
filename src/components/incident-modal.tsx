@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconCheck, IconClose } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 export function IncidentModal({
   open,
   onClose,
 }: {
   open: boolean;
-  onClose: () => void;
+  /** Se invoca siempre al cerrar; recibe si hubo un envío correcto para que la
+   *  vista pueda refrescarse (la lista es server-rendered y no se entera sola). */
+  onClose: (didSubmit?: boolean) => void;
 }) {
   const [titulo, setTitulo] = useState("");
   const [contexto, setContexto] = useState("");
@@ -37,16 +41,27 @@ export function IncidentModal({
     }
   }
 
+  const dialogRef = useModalA11y(open);
+
+  // Cerrar a mitad de un envío dejaba la petición en el aire sin confirmación:
+  // el usuario reintentaba y se registraba una segunda incidencia en Notion.
+  const requestClose = () => {
+    if (loading) return;
+    onClose(sent);
+  };
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !loading) onClose(sent);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, loading, sent]);
 
-  if (!open) return null;
+  // Sin portal, un ancestro con `transform` reancla el `position: fixed` del
+  // overlay a ese ancestro y el modal deja de cubrir la ventana.
+  if (!open || typeof document === "undefined") return null;
 
   const valid = titulo.trim() && contexto.trim();
 
@@ -70,12 +85,23 @@ export function IncidentModal({
         body: form,
       });
       if (!res.ok) {
-        throw new Error("request failed");
+        // El servidor explica el motivo (403 en previsualización, 401 por
+        // sesión caducada…). Mostrarlo evita reintentos a ciegas.
+        let msg =
+          "No hemos podido registrar la incidencia. Inténtalo de nuevo en un momento.";
+        try {
+          const body = await res.json();
+          if (body?.error) msg = String(body.error);
+        } catch {
+          // Respuesta sin cuerpo JSON: se queda el mensaje por defecto.
+        }
+        setError(msg);
+        return;
       }
       setSent(true);
     } catch {
       setError(
-        "No hemos podido registrar la incidencia. Inténtalo de nuevo en un momento.",
+        "No hemos podido conectar. Revisa tu conexión e inténtalo de nuevo.",
       );
     } finally {
       setLoading(false);
@@ -85,21 +111,23 @@ export function IncidentModal({
   const fieldClass =
     "border-border bg-muted/60 text-foreground focus:border-brand/50 w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors";
 
-  return (
+  return createPortal(
     <div
-      onClick={onClose}
-      className="animate-in fade-in-0 fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(15,12,9,0.55)] p-5 backdrop-blur-[4px] duration-200"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Nueva incidencia"
+      onClick={requestClose}
+      className="animate-in fade-in-0 fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[rgba(15,12,9,0.55)] p-5 backdrop-blur-[4px] duration-200"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="incident-modal-title"
         onClick={(e) => e.stopPropagation()}
-        className="border-border bg-card animate-in fade-in-0 zoom-in-95 relative max-h-[calc(100vh-40px)] w-full max-w-[540px] overflow-y-auto rounded-[22px] border p-[30px] shadow-[var(--shadow-lg)] duration-200"
+        className="border-border bg-card animate-in fade-in-0 zoom-in-95 relative my-auto max-h-[calc(100vh-40px)] w-full max-w-[540px] overflow-y-auto rounded-[22px] border p-[30px] shadow-[var(--shadow-lg)] duration-200 outline-none"
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={requestClose}
           aria-label="Cerrar"
           className="border-border bg-card text-muted-foreground hover:bg-muted absolute top-4 right-4 flex size-[34px] items-center justify-center rounded-[10px] border transition-colors"
         >
@@ -118,7 +146,10 @@ export function IncidentModal({
             <span className="bg-success text-success-foreground mb-3.5 inline-flex size-[52px] items-center justify-center rounded-full">
               <IconCheck width={26} height={26} />
             </span>
-            <h2 className="text-foreground text-[21px] font-extrabold tracking-tight">
+            <h2
+              id="incident-modal-title"
+              className="text-foreground text-[21px] font-extrabold tracking-tight"
+            >
               Incidencia registrada
             </h2>
             <p className="text-muted-foreground mx-auto mt-1.5 mb-5 max-w-[42ch] text-sm leading-relaxed">
@@ -127,7 +158,7 @@ export function IncidentModal({
             </p>
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="bg-brand text-brand-foreground h-11 rounded-[13px] px-6 text-sm font-semibold shadow-[var(--shadow-sm)] transition-opacity hover:opacity-90"
             >
               Cerrar
@@ -135,7 +166,10 @@ export function IncidentModal({
           </div>
         ) : (
           <form onSubmit={submit} className="animate-in fade-in-0 duration-200">
-            <h2 className="text-foreground text-[22px] font-extrabold tracking-tight">
+            <h2
+              id="incident-modal-title"
+              className="text-foreground text-[22px] font-extrabold tracking-tight"
+            >
               Nueva incidencia
             </h2>
             <p className="text-muted-foreground mt-1 mb-5 text-sm leading-relaxed">
@@ -144,11 +178,15 @@ export function IncidentModal({
 
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                <label
+                  htmlFor="incident-titulo"
+                  className="text-foreground mb-1.5 block text-[12.5px] font-bold"
+                >
                   Resumen de la incidencia
                   <span className="text-brand-accent"> *</span>
                 </label>
                 <input
+                  id="incident-titulo"
                   type="text"
                   required
                   value={titulo}
@@ -158,11 +196,15 @@ export function IncidentModal({
                 />
               </div>
               <div>
-                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                <label
+                  htmlFor="incident-contexto"
+                  className="text-foreground mb-1.5 block text-[12.5px] font-bold"
+                >
                   Contexto detallado
                   <span className="text-brand-accent"> *</span>
                 </label>
                 <textarea
+                  id="incident-contexto"
                   required
                   rows={4}
                   value={contexto}
@@ -172,13 +214,17 @@ export function IncidentModal({
                 />
               </div>
               <div>
-                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                <label
+                  htmlFor="incident-loom"
+                  className="text-foreground mb-1.5 block text-[12.5px] font-bold"
+                >
                   Loom asociado{" "}
                   <span className="text-muted-foreground font-medium">
                     (opcional)
                   </span>
                 </label>
                 <input
+                  id="incident-loom"
                   type="url"
                   value={loom}
                   onChange={(e) => setLoom(e.target.value)}
@@ -187,7 +233,10 @@ export function IncidentModal({
                 />
               </div>
               <div>
-                <label className="text-foreground mb-1.5 block text-[12.5px] font-bold">
+                <label
+                  htmlFor="incident-imagen"
+                  className="text-foreground mb-1.5 block text-[12.5px] font-bold"
+                >
                   Imagen asociada{" "}
                   <span className="text-muted-foreground font-medium">
                     (opcional)
@@ -208,10 +257,12 @@ export function IncidentModal({
                   </div>
                 ) : (
                   <label
+                    htmlFor="incident-imagen"
                     className={`${fieldClass} text-muted-foreground hover:border-brand/50 flex cursor-pointer items-center gap-2`}
                   >
                     <span>Subir una captura o foto…</span>
                     <input
+                      id="incident-imagen"
                       type="file"
                       accept="image/*"
                       className="hidden"
@@ -223,7 +274,12 @@ export function IncidentModal({
             </div>
 
             {error && (
-              <p className="text-danger-foreground mt-4 text-[13px]">{error}</p>
+              <p
+                role="alert"
+                className="text-danger-foreground mt-4 text-[13px]"
+              >
+                {error}
+              </p>
             )}
 
             <button
@@ -240,6 +296,7 @@ export function IncidentModal({
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

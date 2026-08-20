@@ -66,11 +66,20 @@ export async function syncMeetings() {
     }
 
     // Reconciliación por empresa: elimina los que ya no están.
+    //
+    // Guarda de resultado vacío: si Notion devuelve 0 filas no podemos
+    // distinguir "el cliente no tiene reuniones" de un fallo transitorio
+    // (permiso perdido sobre Seguimientos, propiedad renombrada, filtro que
+    // deja de casar). Sin este `continue`, el DELETE se quedaría sin cláusula
+    // de exclusión y vaciaría el histórico de reuniones de la empresa.
+    if (mapped.length === 0) continue;
+
     const keep = mapped.map((m) => m.notion_id);
-    let del = admin.from("meetings").delete().eq("company_id", companyId);
-    if (keep.length > 0)
-      del = del.not("notion_id", "in", `(${keep.join(",")})`);
-    const { error: delErr } = await del;
+    const { error: delErr } = await admin
+      .from("meetings")
+      .delete()
+      .eq("company_id", companyId)
+      .not("notion_id", "in", `(${keep.join(",")})`);
     if (delErr) throw delErr;
   }
 

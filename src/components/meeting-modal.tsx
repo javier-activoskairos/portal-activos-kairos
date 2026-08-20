@@ -5,6 +5,7 @@ import Image from "next/image";
 import consultantsData from "@/data/consultants.json";
 import { IconArrowLeft, IconClose } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 type MeetingKey = "astrapi" | "arete" | "protos";
 
@@ -96,6 +97,14 @@ export function MeetingModal({
     if (!open) setTipo(null);
   }
 
+  const dialogRef = useModalA11y(open);
+
+  // No hay envío que interrumpir aquí, pero se mantiene el mismo punto único de
+  // cierre que el resto de modales para no duplicar la llamada en cada botón.
+  const requestClose = () => {
+    onClose();
+  };
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -111,30 +120,32 @@ export function MeetingModal({
   if (!open) return null;
 
   // Solo los Custodios Kairos de la empresa (cotejando el usuario de Notion de
-  // [AKE] - Equipo con "Custodio Kairos" de [AK] - Empresas). Si la empresa no
-  // tiene custodios resueltos, se muestran todos para no dejar la lista vacía.
+  // [AKE] - Equipo con "Custodio Kairos" de [AK] - Empresas). Sin fallback a
+  // todos los consultores: ofrecer a alguien que no lleva la cuenta del cliente
+  // acaba en una reunión con quien no conoce su sistema.
   const custodios = CONSULTANTS.filter(
     (c) => c.userId && custodianUserIds.includes(c.userId),
   );
-  const elegibles = custodios.length > 0 ? custodios : CONSULTANTS;
 
-  const consultores = tipo ? elegibles.filter((c) => c.meetings[tipo.key]) : [];
+  const consultores = tipo ? custodios.filter((c) => c.meetings[tipo.key]) : [];
 
   return (
     <div
-      onClick={onClose}
-      className="animate-in fade-in-0 fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(15,12,9,0.55)] p-5 backdrop-blur-[4px] duration-200"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Agenda una reunión"
+      onClick={requestClose}
+      className="animate-in fade-in-0 fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[rgba(15,12,9,0.55)] p-5 backdrop-blur-[4px] duration-200"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="meeting-modal-title"
         onClick={(e) => e.stopPropagation()}
-        className="border-border bg-card animate-in fade-in-0 zoom-in-95 relative w-full max-w-[540px] rounded-[22px] border p-[30px] shadow-[var(--shadow-lg)] duration-200"
+        className="border-border bg-card animate-in fade-in-0 zoom-in-95 relative my-auto w-full max-w-[540px] rounded-[22px] border p-[30px] shadow-[var(--shadow-lg)] duration-200 outline-none"
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={requestClose}
           aria-label="Cerrar"
           className="border-border bg-card text-muted-foreground hover:bg-muted absolute top-4 right-4 flex size-[34px] items-center justify-center rounded-[10px] border transition-colors"
         >
@@ -150,7 +161,10 @@ export function MeetingModal({
 
         {!tipo ? (
           <div className="animate-in fade-in-0 duration-200">
-            <h2 className="text-foreground text-[22px] font-extrabold tracking-tight">
+            <h2
+              id="meeting-modal-title"
+              className="text-foreground text-[22px] font-extrabold tracking-tight"
+            >
               Agenda una reunión
             </h2>
             <p className="text-muted-foreground mt-1 mb-5 text-sm leading-relaxed">
@@ -184,7 +198,10 @@ export function MeetingModal({
           </div>
         ) : (
           <div className="animate-in fade-in-0 duration-200">
-            <h2 className="text-foreground flex items-center gap-2.5 text-[22px] font-extrabold tracking-tight">
+            <h2
+              id="meeting-modal-title"
+              className="text-foreground flex items-center gap-2.5 text-[22px] font-extrabold tracking-tight"
+            >
               <span className="text-xl">{tipo.glyph}</span>
               {tipo.name}
             </h2>
@@ -193,7 +210,7 @@ export function MeetingModal({
             </p>
             {consultores.length === 0 ? (
               <p className="text-muted-foreground py-4 text-center text-[13.5px]">
-                No hay consultores disponibles para este tipo de reunión.
+                Aún no tienes consultor asignado. Escríbenos y lo resolvemos.
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -203,7 +220,7 @@ export function MeetingModal({
                     href={c.meetings[tipo.key]}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={onClose}
+                    onClick={requestClose}
                     className="border-border bg-muted/60 hover:border-brand/40 hover:bg-accent flex flex-col items-center gap-2.5 rounded-2xl border p-[22px_16px] text-center transition-all hover:-translate-y-0.5"
                   >
                     <ConsultantAvatar consultant={c} />

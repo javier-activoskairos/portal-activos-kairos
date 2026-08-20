@@ -23,7 +23,11 @@ export async function updateNotionContact(
   },
 ) {
   const properties: Record<string, any> = {};
-  if (f.firstName !== undefined)
+  // "Nombre" es el TÍTULO de la página en [AK] - Contactos. Enviar un título
+  // vacío dejaría el contacto como "Untitled" en el CRM, así que un nombre en
+  // blanco simplemente no se propaga: el portal lo admite, Notion conserva el
+  // que ya tenía.
+  if (f.firstName !== undefined && f.firstName?.trim())
     properties["Nombre"] = { title: rich(f.firstName) };
   if (f.lastName !== undefined)
     properties["Apellidos"] = { rich_text: rich(f.lastName) };

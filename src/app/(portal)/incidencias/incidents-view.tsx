@@ -6,11 +6,13 @@ import { StatusBadge } from "@/components/status-badge";
 import {
   IconArrowLeft,
   IconCheck,
+  IconClose,
   IconExternal,
   IconFile,
   IconRefresh,
 } from "@/components/icons";
 import { Input } from "@/components/ui/input";
+import { CancelIncidentModal } from "@/components/cancel-incident-modal";
 import { ReopenIncidentModal } from "@/components/reopen-incident-modal";
 import { VerifyIncidentModal } from "@/components/verify-incident-modal";
 import {
@@ -60,16 +62,19 @@ function IncidentDetail({
   onBack,
   onReopen,
   onVerify,
+  onCancel,
 }: {
   incident: IncidentRow;
   onBack: () => void;
   onReopen: () => void;
   onVerify: () => void;
+  onCancel: () => void;
 }) {
   const badge = incidentBadge(incident.status);
   const attachments = incident.attachments ?? [];
   const verify = isVerify(incident);
   const canReopen = verify || isResolved(incident);
+  const canCancel = isOpen(incident);
   return (
     <div className="portal-reveal space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -100,6 +105,16 @@ function IncidentDetail({
             >
               <IconRefresh width={15} height={15} />
               Reabrir
+            </button>
+          )}
+          {canCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="border-border bg-card text-foreground hover:bg-muted flex min-h-11 items-center gap-2 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors"
+            >
+              <IconClose width={15} height={15} />
+              Anular
             </button>
           )}
         </div>
@@ -250,12 +265,14 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reopenId, setReopenId] = useState<string | null>(null);
   const [verifyId, setVerifyId] = useState<string | null>(null);
+  const [cancelId, setCancelId] = useState<string | null>(null);
 
   const byId = (id: string | null) =>
     id ? (incidents.find((i) => i.id === id) ?? null) : null;
   const selected = byId(selectedId);
   const reopenInc = byId(reopenId);
   const verifyInc = byId(verifyId);
+  const cancelInc = byId(cancelId);
 
   const abiertas = useMemo(() => incidents.filter(isOpen), [incidents]);
   const porVerificar = useMemo(() => incidents.filter(isVerify), [incidents]);
@@ -308,6 +325,14 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           onClose={closeAfter(() => setVerifyId(null))}
         />
       )}
+      {cancelInc && (
+        <CancelIncidentModal
+          open
+          incidentId={cancelInc.id}
+          incidentTitle={cancelInc.title}
+          onClose={closeAfter(() => setCancelId(null))}
+        />
+      )}
     </>
   );
 
@@ -319,6 +344,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
           onBack={() => setSelectedId(null)}
           onReopen={() => setReopenId(selected.id)}
           onVerify={() => setVerifyId(selected.id)}
+          onCancel={() => setCancelId(selected.id)}
         />
         {modals}
       </>
@@ -372,6 +398,7 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                   key={i.id}
                   i={i}
                   onOpen={() => setSelectedId(i.id)}
+                  onCancel={() => setCancelId(i.id)}
                 />
               ))}
             </div>
@@ -520,26 +547,55 @@ function EmptyCard({ title, sub }: { title: string; sub: string }) {
   );
 }
 
-function IncidentCard({ i, onOpen }: { i: IncidentRow; onOpen: () => void }) {
+// La tarjeta ya no puede ser un único <button>: "Anular" es una acción propia y
+// anidar botones es HTML inválido. El botón del título se estira con
+// `after:inset-0` sobre la tarjeta (de ahí `relative`) para conservar el gesto
+// de "toda la tarjeta abre el detalle", y el de anular se pinta por encima con
+// `relative z-10` para quedar fuera de esa capa.
+function IncidentCard({
+  i,
+  onOpen,
+  onCancel,
+}: {
+  i: IncidentRow;
+  onOpen: () => void;
+  onCancel: () => void;
+}) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="border-border bg-card flex flex-col rounded-[20px] border p-[18px] text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)]"
+    <div
+      className={cn(
+        "border-border bg-card relative flex flex-col rounded-[20px] border p-[18px] shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)]",
+        ROW_FOCUS,
+      )}
     >
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
-          {i.title}
-        </span>
-        <StatusBadge
-          label={incidentStatusLabel(i.status)}
-          spec={incidentBadge(i.status)}
-        />
-      </div>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="mb-3 text-left after:absolute after:inset-0 focus-visible:outline-none"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
+            {i.title}
+          </span>
+          <StatusBadge
+            label={incidentStatusLabel(i.status)}
+            spec={incidentBadge(i.status)}
+          />
+        </div>
+      </button>
       <div className="text-muted-foreground mt-auto text-[12px]">
         {formatDate(i.created_at)}
         {i.label ? ` · ${i.label}` : ""}
       </div>
-    </button>
+      <div className="relative z-10 mt-3 flex">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[11px] border px-3 py-2 text-[12.5px] font-semibold transition-colors"
+        >
+          <IconClose width={14} height={14} /> Anular
+        </button>
+      </div>
+    </div>
   );
 }

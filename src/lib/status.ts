@@ -22,6 +22,7 @@ const INCIDENT_BADGE: Record<string, BadgeSpec> = {
   Verificación: { tone: "warning", dot: true },
   Escalada: { tone: "orange", dot: true },
   Solucionada: { tone: "success", dot: false },
+  Anulada: { tone: "muted", dot: false },
 };
 
 /*
@@ -36,7 +37,17 @@ export const INCIDENT_OPEN = [
   "En Espera",
 ] as const;
 export const INCIDENT_VERIFY = ["Verificación"] as const;
-export const INCIDENT_RESOLVED = ["Solucionada", "Escalada"] as const;
+export const INCIDENT_RESOLVED = [
+  "Solucionada",
+  "Escalada",
+  "Anulada",
+] as const;
+
+/**
+ * Estados desde los que el cliente puede anular su propia incidencia: las que
+ * siguen vivas. Una ya cerrada (o anulada) no se anula otra vez.
+ */
+export const INCIDENT_CANCELLABLE = INCIDENT_OPEN;
 
 export type IncidentBucket = "open" | "verify" | "resolved";
 
@@ -57,6 +68,19 @@ export function incidentBucket(
   return "resolved";
 }
 
+/*
+ * Estados que cierran la incidencia SIN que Kairos la resolviera. Cuentan como
+ * cerradas (aparecen en la tabla de resueltas), pero no como trabajo entregado:
+ * sumarlas a "Resueltas" en las gráficas infla el dato con incidencias que el
+ * propio cliente retiró.
+ */
+const NOT_COUNTED_SET: ReadonlySet<string> = new Set(["Anulada"]);
+
+/** Si la incidencia debe entrar en las métricas de rendimiento del portal. */
+export function countsForMetrics(status: string | null | undefined): boolean {
+  return !status || !NOT_COUNTED_SET.has(status);
+}
+
 // Etiqueta de cara al cliente: la página promete "sin jerga", así que no se
 // muestran los nombres internos de Notion.
 const INCIDENT_STATUS_LABEL: Record<string, string> = {
@@ -66,6 +90,7 @@ const INCIDENT_STATUS_LABEL: Record<string, string> = {
   Verificación: "Lista para que la revises",
   Escalada: "Resuelta, con seguimiento",
   Solucionada: "Resuelta",
+  Anulada: "Anulada",
 };
 
 export function incidentStatusLabel(status: string | null | undefined): string {

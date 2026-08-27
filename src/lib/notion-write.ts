@@ -77,4 +77,37 @@ export async function updateNotionCompany(
     properties["CP"] = { rich_text: rich(f.postalCode) };
   await notionClient().pages.update({ page_id: pageId, properties } as any);
 }
+
+/** Estado de [AKS] - Incidencias que usa el portal al anular. */
+export const NOTION_INCIDENT_CANCELLED = "Anulada";
+
+/**
+ * Anula una incidencia en [AKS] - Incidencias: pasa el Estado a "Anulada",
+ * cierra "Fin" y deja el motivo del cliente en "Respuesta" sin pisar lo que ya
+ * hubiera escrito el equipo (se antepone el nuevo texto).
+ *
+ * A diferencia de reabrir/verificar, aquí no hay webhook de n8n: no hay nada
+ * que orquestar más allá del cambio de estado, así que se escribe directo con
+ * el token de Notion del portal (mismo camino que `updateNotionContact`).
+ */
+export async function cancelNotionIncident(
+  pageId: string,
+  f: { motivo: string; email: string | null; previousResponse?: string | null },
+) {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const quien = f.email?.trim() ? ` por ${f.email.trim()}` : "";
+  const nota = `Anulada desde el portal${quien} el ${stamp}: ${f.motivo.trim()}`;
+  const previo = f.previousResponse?.trim();
+  // Notion corta los rich_text a 2000 caracteres por bloque de texto; el motivo
+  // ya llega recortado desde la ruta, así que solo se acota el histórico.
+  const content = previo ? `${nota}\n\n${previo}`.slice(0, 2000) : nota;
+  await notionClient().pages.update({
+    page_id: pageId,
+    properties: {
+      Estado: { status: { name: NOTION_INCIDENT_CANCELLED } },
+      Fin: { date: { start: stamp } },
+      Respuesta: { rich_text: [{ type: "text", text: { content } }] },
+    },
+  } as any);
+}
 /* eslint-enable @typescript-eslint/no-explicit-any */

@@ -9,7 +9,12 @@ import {
   dateEnd,
   formulaValue,
 } from "@/lib/notion";
-import { runSync, getActiveCompanies, type SyncMode } from "@/lib/sync/run";
+import {
+  runSync,
+  getActiveCompanies,
+  type CompanyRef,
+  type SyncMode,
+} from "@/lib/sync/run";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -130,7 +135,87 @@ async function fetchAndUpsert(admin: Admin, since: string | null) {
   console.log(
     `[sync:incidents] Supabase IDs escritos en Notion: ${idsWritten}`,
   );
+
+  await reconcileDeleted(admin, notion, dbId, companies);
+
   return { rowsRead, rowsUpserted };
+}
+
+/**
+ * Borra de Supabase las incidencias que ya no existen en Notion.
+ *
+ * La sync incremental solo hace upsert de lo editado desde `since`, y una página
+ * borrada, archivada o desvinculada de su empresa deja de aparecer en la query
+ * de Notion: nunca vuelve a tocarse, así que se quedaba viva en la réplica con
+ * su último estado. Por eso el portal llegó a listar 140 incidencias abiertas de
+ * Activos Kairos cuando en Notion solo había 6.
+ *
+ * Un borrado no se puede deducir de un incremental, así que aquí se recorre la
+ * lista COMPLETA de ids por empresa (sin filtro de fecha y sin traer
+ * propiedades, es barato) y se elimina lo que sobra.
+ *
+ * Regla de seguridad: si la lectura de Notion falla a media paginación, esa
+ * empresa se salta entera. Borrar con una lista incompleta vaciaría el portal
+ * del cliente.
+ */
+async function reconcileDeleted(
+  admin: Admin,
+  notion: ReturnType<typeof notionClient>,
+  dbId: string,
+  companies: CompanyRef[],
+) {
+  let deleted = 0;
+
+  for (const company of companies) {
+    const vivos = new Set<string>();
+    try {
+      let cursor: string | undefined = undefined;
+      do {
+        const res: any = await notion.databases.query({
+          database_id: dbId,
+          filter: {
+            property: "Empresa",
+            relation: { contains: company.notion_id },
+          },
+          // Solo se necesitan los ids de página; el título es la propiedad más
+          // barata que la API acepta como filtro de respuesta.
+          filter_properties: ["title"],
+          start_cursor: cursor,
+          page_size: 100,
+        });
+        for (const pg of res.results) vivos.add(pg.id);
+        cursor = res.has_more ? res.next_cursor : undefined;
+      } while (cursor);
+    } catch (e) {
+      console.error(
+        `[sync:incidents] reconciliación saltada para ${company.notion_id}:`,
+        e instanceof Error ? e.message : e,
+      );
+      continue;
+    }
+
+    const { data: replicadas, error } = await admin
+      .from("incidents")
+      .select("id, notion_id")
+      .eq("company_id", company.id);
+    if (error) throw new Error(`Reconciliar incidents: ${error.message}`);
+
+    const huerfanas = (replicadas ?? [])
+      .filter((r) => !vivos.has(r.notion_id))
+      .map((r) => r.id);
+    if (huerfanas.length === 0) continue;
+
+    const { error: delErr } = await admin
+      .from("incidents")
+      .delete()
+      .in("id", huerfanas);
+    if (delErr) throw new Error(`Borrar incidents: ${delErr.message}`);
+    deleted += huerfanas.length;
+  }
+
+  if (deleted > 0) {
+    console.log(`[sync:incidents] huérfanas borradas: ${deleted}`);
+  }
 }
 
 export function syncIncidents(mode: SyncMode = "cron") {

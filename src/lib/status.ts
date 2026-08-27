@@ -22,6 +22,7 @@ const INCIDENT_BADGE: Record<string, BadgeSpec> = {
   Verificación: { tone: "warning", dot: true },
   Escalada: { tone: "orange", dot: true },
   Solucionada: { tone: "success", dot: false },
+  Anulada: { tone: "muted", dot: false },
 };
 
 /*
@@ -36,7 +37,17 @@ export const INCIDENT_OPEN = [
   "En Espera",
 ] as const;
 export const INCIDENT_VERIFY = ["Verificación"] as const;
-export const INCIDENT_RESOLVED = ["Solucionada", "Escalada"] as const;
+export const INCIDENT_RESOLVED = [
+  "Solucionada",
+  "Escalada",
+  "Anulada",
+] as const;
+
+/**
+ * Estados desde los que el cliente puede anular su propia incidencia: las que
+ * siguen vivas. Una ya cerrada (o anulada) no se anula otra vez.
+ */
+export const INCIDENT_CANCELLABLE = INCIDENT_OPEN;
 
 export type IncidentBucket = "open" | "verify" | "resolved";
 
@@ -66,6 +77,7 @@ const INCIDENT_STATUS_LABEL: Record<string, string> = {
   Verificación: "Lista para que la revises",
   Escalada: "Resuelta, con seguimiento",
   Solucionada: "Resuelta",
+  Anulada: "Anulada",
 };
 
 export function incidentStatusLabel(status: string | null | undefined): string {

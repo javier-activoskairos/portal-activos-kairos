@@ -68,6 +68,19 @@ export function incidentBucket(
   return "resolved";
 }
 
+/*
+ * Estados que cierran la incidencia SIN que Kairos la resolviera. Cuentan como
+ * cerradas (aparecen en la tabla de resueltas), pero no como trabajo entregado:
+ * sumarlas a "Resueltas" en las gráficas infla el dato con incidencias que el
+ * propio cliente retiró.
+ */
+const NOT_COUNTED_SET: ReadonlySet<string> = new Set(["Anulada"]);
+
+/** Si la incidencia debe entrar en las métricas de rendimiento del portal. */
+export function countsForMetrics(status: string | null | undefined): boolean {
+  return !status || !NOT_COUNTED_SET.has(status);
+}
+
 // Etiqueta de cara al cliente: la página promete "sin jerga", así que no se
 // muestran los nombres internos de Notion.
 const INCIDENT_STATUS_LABEL: Record<string, string> = {

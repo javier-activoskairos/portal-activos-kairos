@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPortalDb } from "@/lib/session";
 import { IconAlert, IconAssets, IconBuilding } from "@/components/icons";
-import { formatProgress, incidentBucket } from "@/lib/status";
+import { countsForMetrics, formatProgress, incidentBucket } from "@/lib/status";
 import { nameFromEmail } from "@/lib/utils";
 import { niceScale, fmtHoras } from "@/lib/charts";
 import {
@@ -178,7 +178,11 @@ export default async function InicioPage() {
 
   // --- Gráfico B: incidencias por mes (por created_at), resueltas/abiertas ---
   const incidentsByMonth = months.map((m) => {
-    const inMonth = incidents.filter((i) => monthKey(i.created_at) === m.key);
+    // Las anuladas quedan fuera del gráfico entero (`countsForMetrics`): las
+    // retiró el cliente, así que ni son trabajo entregado ni siguen abiertas.
+    const inMonth = incidents.filter(
+      (i) => monthKey(i.created_at) === m.key && countsForMetrics(i.status),
+    );
     // Clasificación por ESTADO, no por si tiene fecha de fin: una incidencia
     // Solucionada sin "Fin" en Notion se pintaba como abierta en el gráfico
     // mientras el KPI de arriba no la contaba, en la misma pantalla.

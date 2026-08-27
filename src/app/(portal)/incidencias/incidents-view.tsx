@@ -398,7 +398,6 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
                   key={i.id}
                   i={i}
                   onOpen={() => setSelectedId(i.id)}
-                  onCancel={() => setCancelId(i.id)}
                 />
               ))}
             </div>
@@ -547,55 +546,28 @@ function EmptyCard({ title, sub }: { title: string; sub: string }) {
   );
 }
 
-// La tarjeta ya no puede ser un único <button>: "Anular" es una acción propia y
-// anidar botones es HTML inválido. El botón del título se estira con
-// `after:inset-0` sobre la tarjeta (de ahí `relative`) para conservar el gesto
-// de "toda la tarjeta abre el detalle", y el de anular se pinta por encima con
-// `relative z-10` para quedar fuera de esa capa.
-function IncidentCard({
-  i,
-  onOpen,
-  onCancel,
-}: {
-  i: IncidentRow;
-  onOpen: () => void;
-  onCancel: () => void;
-}) {
+// La tarjeta vuelve a ser un único <button>: anular se hace desde el detalle,
+// así que aquí no hay más acción que abrirla.
+function IncidentCard({ i, onOpen }: { i: IncidentRow; onOpen: () => void }) {
   return (
-    <div
-      className={cn(
-        "border-border bg-card relative flex flex-col rounded-[20px] border p-[18px] shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)]",
-        ROW_FOCUS,
-      )}
+    <button
+      type="button"
+      onClick={onOpen}
+      className="border-border bg-card flex flex-col rounded-[20px] border p-[18px] text-left shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-md)]"
     >
-      <button
-        type="button"
-        onClick={onOpen}
-        className="mb-3 text-left after:absolute after:inset-0 focus-visible:outline-none"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
-            {i.title}
-          </span>
-          <StatusBadge
-            label={incidentStatusLabel(i.status)}
-            spec={incidentBadge(i.status)}
-          />
-        </div>
-      </button>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <span className="text-foreground text-[14.5px] font-semibold tracking-tight">
+          {i.title}
+        </span>
+        <StatusBadge
+          label={incidentStatusLabel(i.status)}
+          spec={incidentBadge(i.status)}
+        />
+      </div>
       <div className="text-muted-foreground mt-auto text-[12px]">
         {formatDate(i.created_at)}
         {i.label ? ` · ${i.label}` : ""}
       </div>
-      <div className="relative z-10 mt-3 flex">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[11px] border px-3 py-2 text-[12.5px] font-semibold transition-colors"
-        >
-          <IconClose width={14} height={14} /> Anular
-        </button>
-      </div>
-    </div>
+    </button>
   );
 }

@@ -112,6 +112,20 @@ function LogoutButton({ className }: { className?: string }) {
   );
 }
 
+export interface LastSync {
+  /** Más reciente de todas las fuentes; es lo que se muestra en Inicio. */
+  all: string | null;
+  assets: string | null;
+  incidents: string | null;
+}
+
+// Qué fuente mira cada sección. Lo que no esté aquí cae en "all": el resto de
+// páginas no cuelga de una sola tabla.
+const SYNC_SOURCE: { prefix: string; key: keyof LastSync }[] = [
+  { prefix: "/incidencias", key: "incidents" },
+  { prefix: "/activos", key: "assets" },
+];
+
 export function PortalNav({
   email,
   companyName,
@@ -123,6 +137,7 @@ export function PortalNav({
   avatarUrl = null,
   custodianUserIds = [],
   readOnly = false,
+  lastSync,
 }: {
   email: string;
   companyName: string;
@@ -133,6 +148,8 @@ export function PortalNav({
   displayName?: string | null;
   avatarUrl?: string | null;
   custodianUserIds?: string[];
+  /** Marcas ya formateadas en servidor (ver `formatSyncStamp`). */
+  lastSync?: LastSync;
   /** Modo "Ver como cliente": el backend rechaza las escrituras con 403,
    *  así que los CTA que crean datos se deshabilitan en la propia UI. */
   readOnly?: boolean;
@@ -169,6 +186,10 @@ export function PortalNav({
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
+
+  const syncKey =
+    SYNC_SOURCE.find((s) => isActive(s.prefix))?.key ?? ("all" as const);
+  const syncStamp = lastSync?.[syncKey] ?? null;
 
   // Clase de fila de navegación (icono + etiqueta), centrada si está colapsada.
   // Compacta: el menú es un índice, no el protagonista de la pantalla.
@@ -397,6 +418,12 @@ export function PortalNav({
                 </>
               )}
             </Link>
+          )}
+
+          {!collapsed && syncStamp && (
+            <p className="text-muted-foreground px-1 text-[11px] leading-tight">
+              Sincronizado {syncStamp}
+            </p>
           )}
 
           <div

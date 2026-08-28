@@ -3,7 +3,7 @@ import { getPortalDb } from "@/lib/session";
 import { PortalNav } from "@/components/portal-nav";
 import { exitViewAs } from "./admin/view-as-actions";
 import { IconLogout } from "@/components/icons";
-import { INCIDENT_OPEN } from "@/lib/status";
+import { INCIDENT_OPEN, formatSyncStamp } from "@/lib/status";
 
 export default async function PortalLayout({
   children,
@@ -32,6 +32,37 @@ export default async function PortalLayout({
     .eq("auth_user_id", session.userId)
     .maybeSingle();
 
+  // Última sincronización de cada fuente, para el pie del menú. Se lee del
+  // `synced_at` de las propias filas y no de `sync_runs`, que por RLS solo ven
+  // los admins: así el cliente ve cuándo se actualizó LO QUE TIENE DELANTE, que
+  // es la pregunta real, y una fuente que dejara de replicarse se nota aunque
+  // el cron siga marcándose como correcto.
+  const ultimaSync = async (tabla: "assets" | "incidents" | "meetings") => {
+    const { data } = await db
+      .from(tabla)
+      .select("synced_at")
+      .eq("company_id", companyId)
+      .order("synced_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data?.synced_at ?? null;
+  };
+  const [syncAssets, syncIncidents, syncMeetings] = await Promise.all([
+    ultimaSync("assets"),
+    ultimaSync("incidents"),
+    ultimaSync("meetings"),
+  ]);
+  const masReciente = [syncAssets, syncIncidents, syncMeetings]
+    .filter((v): v is string => Boolean(v))
+    .sort()
+    .at(-1);
+  const lastSync = {
+    // Inicio cruza las tres fuentes, así que enseña la más reciente de todas.
+    all: formatSyncStamp(masReciente),
+    assets: formatSyncStamp(syncAssets),
+    incidents: formatSyncStamp(syncIncidents),
+  };
+
   const va = session.viewingAs;
   const navEmail = va?.userEmail ?? session.email;
   const navDisplayName = va
@@ -54,6 +85,7 @@ export default async function PortalLayout({
         canBilling={session.canManageCompany}
         custodianUserIds={session.custodianUserIds}
         openIncidents={openIncidents ?? 0}
+        lastSync={lastSync}
         // En previsualización el backend rechaza las escrituras con 403: los
         // CTA se deshabilitan para no invitar a una acción que va a fallar.
         readOnly={!!va}

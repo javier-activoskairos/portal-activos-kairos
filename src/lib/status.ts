@@ -230,6 +230,29 @@ export function formatDateShort(value: string | null | undefined): string {
   });
 }
 
+/**
+ * Marca de la última sincronización, para el pie del menú ("hoy 00:51",
+ * "27 ago 00:51"). Se formatea SIEMPRE en servidor y se envía ya como texto: si
+ * el cliente lo calculase, su reloj y su zona decidirían qué día es "hoy" y
+ * React avisaría de un desajuste de hidratación.
+ */
+export function formatSyncStamp(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  const dia = (x: Date) =>
+    x.toLocaleDateString("es-ES", { timeZone: DISPLAY_TIME_ZONE });
+  const hora = d.toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: DISPLAY_TIME_ZONE,
+  });
+  if (dia(d) === dia(new Date())) return `hoy ${hora}`;
+  return `${formatDateShort(value)} ${hora}`;
+}
+
 export function formatProgress(value: string | null | undefined): number {
   if (!value) return 0;
   const pctMatch = value.match(/(\d{1,3})\s*%/);

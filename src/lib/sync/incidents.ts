@@ -77,7 +77,23 @@ async function writeBackSupabaseIds(
   return written;
 }
 
-async function fetchAndUpsert(admin: Admin, since: string | null) {
+/**
+ * Escaneo COMPLETO por empresa, sin ventana incremental.
+ *
+ * Antes se filtraba por `last_edited_time >= since`. Con eso, una edición que
+ * se quedara fuera de la ventana no volvía a entrar nunca: `last_success_at`
+ * avanza en cada pasada, así que la marca pasa por encima y la fila queda
+ * congelada en la réplica para siempre. Es lo que le pasó a las dos incidencias
+ * "GitHub Actions — Run failed…", Solucionadas en Notion desde el 20-jul-2026 y
+ * que el portal seguía pintando como Recibidas más de un mes después. Un
+ * incremental no tiene forma de recuperarse de una ventana perdida.
+ *
+ * Leer todo en cada pasada es además lo que ya hacen assets, meetings e
+ * invoices, y aquí no cuesta ninguna query extra: la reconciliación de borrados
+ * necesitaba de todos modos la lista completa de ids, así que se hace ahora con
+ * este mismo recorrido en vez de con una segunda vuelta.
+ */
+async function fetchAndUpsert(admin: Admin) {
   const notion = notionClient();
   const dbId = process.env.NOTION_INCIDENTS_DB!;
   const companies = await getActiveCompanies(admin);
@@ -85,20 +101,18 @@ async function fetchAndUpsert(admin: Admin, since: string | null) {
   let rowsRead = 0;
   let rowsUpserted = 0;
   let idsWritten = 0;
+  let deleted = 0;
 
   // Multi-empresa: sincroniza las incidencias de cada empresa activa.
   for (const company of companies) {
     const filter: any = {
-      and: [{ property: "Empresa", relation: { contains: company.notion_id } }],
+      property: "Empresa",
+      relation: { contains: company.notion_id },
     };
-    if (since) {
-      filter.and.push({
-        timestamp: "last_edited_time",
-        last_edited_time: { on_or_after: since },
-      });
-    }
 
     let cursor: string | undefined = undefined;
+    const vivas = new Set<string>();
+
     do {
       const res: any = await notion.databases.query({
         database_id: dbId,
@@ -107,6 +121,8 @@ async function fetchAndUpsert(admin: Admin, since: string | null) {
         page_size: 100,
       });
       rowsRead += res.results.length;
+      for (const pg of res.results) vivas.add(pg.id);
+
       const rows = res.results.map((pg: any) => mapIncident(pg, company.id));
       if (rows.length > 0) {
         const { data: saved, error } = await admin
@@ -130,92 +146,52 @@ async function fetchAndUpsert(admin: Admin, since: string | null) {
       }
       cursor = res.has_more ? res.next_cursor : undefined;
     } while (cursor);
+
+    deleted += await deleteOrphans(admin, company, vivas);
   }
 
   console.log(
-    `[sync:incidents] Supabase IDs escritos en Notion: ${idsWritten}`,
+    `[sync:incidents] Supabase IDs escritos en Notion: ${idsWritten}` +
+      (deleted > 0 ? ` · huérfanas borradas: ${deleted}` : ""),
   );
-
-  await reconcileDeleted(admin, notion, dbId, companies);
 
   return { rowsRead, rowsUpserted };
 }
 
 /**
- * Borra de Supabase las incidencias que ya no existen en Notion.
+ * Borra de la réplica las incidencias de la empresa que ya no existen en Notion.
  *
- * La sync incremental solo hace upsert de lo editado desde `since`, y una página
- * borrada, archivada o desvinculada de su empresa deja de aparecer en la query
- * de Notion: nunca vuelve a tocarse, así que se quedaba viva en la réplica con
- * su último estado. Por eso el portal llegó a listar 140 incidencias abiertas de
- * Activos Kairos cuando en Notion solo había 6.
+ * Una página borrada, archivada o desvinculada de su empresa deja de aparecer en
+ * la query, así que ningún upsert vuelve a tocarla: sin este barrido se quedaba
+ * viva con su último estado. Por eso el portal llegó a listar 140 incidencias
+ * abiertas de Activos Kairos cuando en Notion solo había 6.
  *
- * Un borrado no se puede deducir de un incremental, así que aquí se recorre la
- * lista COMPLETA de ids por empresa (sin filtro de fecha y sin traer
- * propiedades, es barato) y se elimina lo que sobra.
- *
- * Regla de seguridad: si la lectura de Notion falla a media paginación, esa
- * empresa se salta entera. Borrar con una lista incompleta vaciaría el portal
- * del cliente.
+ * `vivas` viene del escaneo completo que se acaba de hacer. Si esa lectura
+ * hubiera fallado a media paginación, la excepción sube y no se llega aquí: un
+ * borrado con lista incompleta vaciaría el portal del cliente.
  */
-async function reconcileDeleted(
+async function deleteOrphans(
   admin: Admin,
-  notion: ReturnType<typeof notionClient>,
-  dbId: string,
-  companies: CompanyRef[],
+  company: CompanyRef,
+  vivas: Set<string>,
 ) {
-  let deleted = 0;
+  const { data: replicadas, error } = await admin
+    .from("incidents")
+    .select("id, notion_id")
+    .eq("company_id", company.id);
+  if (error) throw new Error(`Reconciliar incidents: ${error.message}`);
 
-  for (const company of companies) {
-    const vivos = new Set<string>();
-    try {
-      let cursor: string | undefined = undefined;
-      do {
-        const res: any = await notion.databases.query({
-          database_id: dbId,
-          filter: {
-            property: "Empresa",
-            relation: { contains: company.notion_id },
-          },
-          // Solo se necesitan los ids de página; el título es la propiedad más
-          // barata que la API acepta como filtro de respuesta.
-          filter_properties: ["title"],
-          start_cursor: cursor,
-          page_size: 100,
-        });
-        for (const pg of res.results) vivos.add(pg.id);
-        cursor = res.has_more ? res.next_cursor : undefined;
-      } while (cursor);
-    } catch (e) {
-      console.error(
-        `[sync:incidents] reconciliación saltada para ${company.notion_id}:`,
-        e instanceof Error ? e.message : e,
-      );
-      continue;
-    }
+  const huerfanas = (replicadas ?? [])
+    .filter((r) => !vivas.has(r.notion_id))
+    .map((r) => r.id);
+  if (huerfanas.length === 0) return 0;
 
-    const { data: replicadas, error } = await admin
-      .from("incidents")
-      .select("id, notion_id")
-      .eq("company_id", company.id);
-    if (error) throw new Error(`Reconciliar incidents: ${error.message}`);
-
-    const huerfanas = (replicadas ?? [])
-      .filter((r) => !vivos.has(r.notion_id))
-      .map((r) => r.id);
-    if (huerfanas.length === 0) continue;
-
-    const { error: delErr } = await admin
-      .from("incidents")
-      .delete()
-      .in("id", huerfanas);
-    if (delErr) throw new Error(`Borrar incidents: ${delErr.message}`);
-    deleted += huerfanas.length;
-  }
-
-  if (deleted > 0) {
-    console.log(`[sync:incidents] huérfanas borradas: ${deleted}`);
-  }
+  const { error: delErr } = await admin
+    .from("incidents")
+    .delete()
+    .in("id", huerfanas);
+  if (delErr) throw new Error(`Borrar incidents: ${delErr.message}`);
+  return huerfanas.length;
 }
 
 export function syncIncidents(mode: SyncMode = "cron") {

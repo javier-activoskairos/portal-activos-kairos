@@ -166,6 +166,22 @@ export function PortalNav({
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
+  // El menú se pinta en el layout y Next no vuelve a pedirlo al navegar por
+  // cliente entre páginas, así que `openIncidents` se queda con el valor del
+  // primer render de la sesión. Lucas veía "8" en el menú mientras la pantalla
+  // de Incidencias decía "4". Se repesca en cada cambio de página.
+  const [openCount, setOpenCount] = useState(openIncidents);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch("/api/incidencias/abiertas", { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (typeof d?.open === "number") setOpenCount(d.open);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [pathname]);
+
   // Estado colapsado persistente + variable CSS para el margen del contenido.
   useEffect(() => {
     const saved = localStorage.getItem("kp-nav-collapsed") === "1";
@@ -299,7 +315,7 @@ export function PortalNav({
                 </Link>
               );
             }
-            const badge = item.href === "/incidencias" ? openIncidents : 0;
+            const badge = item.href === "/incidencias" ? openCount : 0;
             return (
               <Link
                 key={item.href}
@@ -550,7 +566,7 @@ export function PortalNav({
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = !item.soon && isActive(item.href);
-            const badge = item.href === "/incidencias" ? openIncidents : 0;
+            const badge = item.href === "/incidencias" ? openCount : 0;
             return (
               <Link
                 key={item.href}

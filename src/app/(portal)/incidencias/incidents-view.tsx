@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -266,6 +266,15 @@ export function IncidentsView({ incidents }: { incidents: IncidentRow[] }) {
   const [reopenId, setReopenId] = useState<string | null>(null);
   const [verifyId, setVerifyId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
+
+  // Al abrir el detalle, la vista entera se reemplaza (return anticipado de
+  // abajo) pero el navegador conserva el scroll: si la tarjeta pulsada estaba a
+  // media lista, el detalle aparece cortado, sin el boton "Volver a
+  // Incidencias" ni las pestanas a la vista. Lucas (Mintech) lo leyo como que
+  // "Por verificar solo muestra una incidencia y no sale el menu".
+  useEffect(() => {
+    if (selectedId) window.scrollTo({ top: 0 });
+  }, [selectedId]);
 
   const byId = (id: string | null) =>
     id ? (incidents.find((i) => i.id === id) ?? null) : null;
